@@ -1,95 +1,107 @@
-# AI Document Processor
+# DocuMind AI - Document Processor
 
-A production-ready AI-powered document processing web application built with Next.js, TypeScript, and modern web technologies.
+A production-ready AI-powered document processing web application built with Next.js 15, TypeScript, and modern web technologies.
 
 ## Features
 
 - **Document Upload**: Support for PDF, DOCX, and TXT files with drag-and-drop interface
-- **AI Processing**: Automated text extraction, summarization, and clause detection
-- **Professional UI**: Clean, corporate-style interface with responsive design
+- **AI Processing**: Automated text extraction, summarization, and clause detection using OpenAI GPT-3.5-turbo
+- **Smart Fallback**: Pattern-matching AI when OpenAI API is unavailable
+- **Professional UI**: Clean, slate-themed corporate interface with responsive design
 - **Secure Architecture**: JWT authentication, file validation, and secure storage
-- **Scalable Backend**: Next.js API routes with Prisma ORM and PostgreSQL
-- **Container Ready**: Docker support for easy deployment
+- **Scalable Backend**: Next.js 15 API routes with Prisma ORM and SQLite
+- **Real-time Processing**: Asynchronous document processing with status tracking
 
 ## Tech Stack
 
-- **Frontend**: Next.js 14, React, TypeScript, Tailwind CSS
+- **Frontend**: Next.js 15, React 18, TypeScript, Tailwind CSS
 - **Backend**: Next.js API Routes, Prisma ORM
-- **Database**: PostgreSQL (SQLite for development)
-- **AI**: OpenAI GPT integration
+- **Database**: SQLite (development) / PostgreSQL (production)
+- **AI**: OpenAI GPT-3.5-turbo with intelligent fallback
 - **Storage**: Local filesystem with S3 abstraction layer
 - **Authentication**: JWT with bcrypt password hashing
-- **Containerization**: Docker & Docker Compose
+- **Document Processing**: pdf-parse, mammoth (DOCX), native text parsing
 
 ## Quick Start
 
 ### Prerequisites
 
 - Node.js 18 or higher
-- Docker and Docker Compose
-- OpenAI API key
+- OpenAI API key (optional - falls back to pattern matching)
 
 ### Installation
 
-1. **Clone and setup**:
+1. **Clone the repository**:
    ```bash
    git clone <repository-url>
-   cd ai-document-processor
-   chmod +x scripts/*.sh
-   ./scripts/setup.sh
+   cd my-app
    ```
 
-2. **Configure environment**:
+2. **Install dependencies**:
+   ```bash
+   npm install
+   ```
+
+3. **Configure environment**:
    ```bash
    cp .env.example .env
-   # Edit .env with your OpenAI API key and other settings
+   # Edit .env with your OpenAI API key (optional)
    ```
 
-3. **Start development**:
+4. **Setup database**:
    ```bash
-   ./scripts/dev.sh
+   npx prisma generate
+   npx prisma db push
    ```
 
-4. **Visit**: http://localhost:3000
+5. **Start development server**:
+   ```bash
+   npm run dev
+   ```
 
-## Manual Setup
+6. **Visit**: http://localhost:3000
 
-If you prefer manual setup:
+### First Time Setup
 
-```bash
-# Install dependencies
-npm install
-
-# Start database
-docker-compose -f docker-compose.dev.yml up -d
-
-# Setup database
-npx prisma generate
-npx prisma db push
-
-# Start development server
-npm run dev
-```
+1. Register a new account at `/register`
+2. Login at `/login`
+3. Upload documents at `/upload`
+4. View processed documents at `/documents`
 
 ## Project Structure
 
 ```
-├── app/                    # Next.js app router pages
+├── app/                    # Next.js 15 app router
 │   ├── api/               # API route handlers
-│   ├── dashboard/         # Dashboard page
+│   │   ├── auth/         # Authentication endpoints
+│   │   ├── documents/    # Document management
+│   │   ├── upload/       # File upload handler
+│   │   └── files/        # File serving
+│   ├── login/            # Login page
+│   ├── register/         # Registration page
+│   ├── dashboard/        # Dashboard page
 │   ├── upload/           # Upload page
-│   ├── documents/        # Documents list page
-│   └── settings/         # Settings page
+│   ├── documents/        # Documents list & detail pages
+│   └── layout.tsx        # Root layout with auth provider
 ├── components/           # Reusable UI components
-│   └── ui/              # Base UI components
+│   ├── ui/              # Base UI components (Button, Card, etc.)
+│   ├── layout.tsx       # Main layout with sidebar
+│   ├── sidebar.tsx      # Navigation sidebar
+│   └── header.tsx       # Top header bar
 ├── services/            # Business logic layer
-├── database/           # Database configuration
-├── ai/                # AI processing logic
-├── lib/               # Shared utilities
-├── types/             # TypeScript type definitions
-├── scripts/           # Automation scripts
-├── prisma/           # Database schema
-└── docker-compose.yml # Container configuration
+│   ├── auth.ts         # Authentication service
+│   ├── document.ts     # Document processing service
+│   └── storage.ts      # File storage service
+├── ai/                 # AI processing logic
+│   └── index.ts        # OpenAI integration with fallback
+├── lib/                # Shared utilities
+│   ├── auth-context.tsx # Authentication context
+│   └── utils.ts        # Helper functions
+├── types/              # TypeScript type definitions
+├── prisma/             # Database schema & migrations
+│   └── schema.prisma   # Prisma schema (SQLite)
+├── uploads/            # Local file storage
+└── .env                # Environment variables
 ```
 
 ## Architecture
@@ -104,145 +116,195 @@ npm run dev
 
 ### Key Services
 
-- **DocumentService**: File upload, processing, and management
-- **AuthService**: User authentication and authorization
-- **AIService**: OpenAI integration for document analysis
-- **StorageService**: File storage with provider abstraction
+- **DocumentService**: File upload, text extraction (PDF/DOCX/TXT), AI processing, and document management
+- **AuthService**: JWT-based authentication with bcrypt password hashing
+- **AIService**: OpenAI GPT-3.5-turbo integration with intelligent pattern-matching fallback
+- **StorageService**: Local file storage with S3-ready abstraction layer
+
+## AI Processing
+
+### OpenAI Integration (Recommended)
+
+When configured with a valid OpenAI API key, the system uses GPT-3.5-turbo for:
+- **Document Summarization**: Intelligent 2-3 sentence summaries
+- **Key Data Extraction**: Parties, dates, amounts, obligations
+- **Clause Detection**: Payment terms, obligations, deadlines
+
+### Pattern Matching Fallback
+
+When OpenAI is unavailable, the system uses enhanced pattern matching:
+- Document type detection (contracts, invoices, legal docs, reports)
+- Regex-based entity extraction
+- Keyword frequency analysis
+- Clause identification using linguistic patterns
+
+### Configuration
+
+```bash
+# .env file
+OPENAI_API_KEY="sk-your-actual-api-key"  # Use real AI
+# or
+OPENAI_API_KEY="your-openai-api-key"     # Use fallback
+```
 
 ## API Endpoints
 
 ### Authentication
-- `POST /api/auth/login` - User login
-- `POST /api/auth/register` - User registration
+- `POST /api/auth/login` - User login with JWT token
+- `POST /api/auth/register` - User registration with password hashing
+- `GET /api/auth/verify` - Verify JWT token validity
 
 ### Documents
-- `GET /api/documents` - List user documents
-- `POST /api/upload` - Upload new document
-- `GET /api/documents/[id]` - Get document details
-- `DELETE /api/documents` - Delete document
+- `GET /api/documents` - List user's documents with status
+- `POST /api/upload` - Upload document (PDF/DOCX/TXT, max 10MB)
+- `GET /api/documents/[id]` - Get document details and AI processing results
+- `DELETE /api/documents` - Delete document and associated files
+- `GET /api/files/[filename]` - Download/view document file
 
 ## Environment Variables
 
 ```bash
 # Database
-DATABASE_URL="postgresql://user:pass@localhost:5432/db"
+DATABASE_URL="file:./dev.db"  # SQLite for development
+# DATABASE_URL="postgresql://user:pass@localhost:5432/db"  # PostgreSQL for production
 
 # Authentication
-JWT_SECRET="your-secret-key"
+JWT_SECRET="your-super-secret-jwt-key-change-in-production"
 
-# AI Processing
-OPENAI_API_KEY="your-openai-key"
+# AI Processing (Optional - uses fallback if not set)
+OPENAI_API_KEY="sk-your-openai-api-key"
 
-# Storage (optional)
-STORAGE_TYPE="local" # or "s3"
-AWS_ACCESS_KEY_ID="your-aws-key"
-AWS_SECRET_ACCESS_KEY="your-aws-secret"
-AWS_S3_BUCKET="your-bucket"
+# Storage
+STORAGE_TYPE="local"  # local | s3
 
 # Application
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
+NODE_ENV="development"
+
+# File Upload Limits
+MAX_FILE_SIZE="10485760"  # 10MB in bytes
+ALLOWED_FILE_TYPES="pdf,docx,txt"
 ```
+
+## Troubleshooting
+
+### Common Issues
+
+**File upload button not working?**
+- Clear browser cache and reload
+- Check browser console for errors
+
+**AI processing stuck?**
+- Check server console logs for errors
+- Verify OpenAI API key is valid (if using OpenAI)
+- System automatically falls back to pattern matching if OpenAI fails
+
+**Database errors?**
+```bash
+npx prisma db push --force-reset  # Reset database
+npx prisma generate               # Regenerate client
+```
+
+**Memory allocation errors?**
+- File size limit is 10MB per file
+- Large PDFs may take longer to process
+- Check available system memory
 
 ## Deployment
 
+### Production Checklist
+
+1. **Update environment variables**:
+   - Set strong `JWT_SECRET`
+   - Add production `DATABASE_URL` (PostgreSQL recommended)
+   - Configure `OPENAI_API_KEY` for real AI processing
+   - Set `NODE_ENV="production"`
+
+2. **Database migration**:
+   ```bash
+   # Switch from SQLite to PostgreSQL
+   # Update DATABASE_URL in .env
+   npx prisma db push
+   ```
+
+3. **Build application**:
+   ```bash
+   npm run build
+   npm start
+   ```
+
+### Vercel Deployment (Recommended)
+
+```bash
+# Install Vercel CLI
+npm i -g vercel
+
+# Deploy
+vercel
+
+# Add environment variables in Vercel dashboard
+# Note: Use PostgreSQL (Vercel Postgres) instead of SQLite
+```
+
 ### Docker Deployment
 
-1. **Production build**:
-   ```bash
-   ./scripts/docker-start.sh
-   ```
+```bash
+# Build image
+docker build -t documind-ai .
 
-2. **Manual Docker**:
-   ```bash
-   docker-compose up --build -d
-   ```
+# Run container
+docker run -p 3000:3000 --env-file .env documind-ai
+```
 
 ### Cloud Deployment
 
-#### AWS ECS/EC2
-```bash
-# Build and push to ECR
-docker build -t ai-document-processor .
-docker tag ai-document-processor:latest <ecr-uri>
-docker push <ecr-uri>
+**Vercel** (Easiest):
+- Connect GitHub repository
+- Auto-deploy on push
+- Add Vercel Postgres database
+- Set environment variables
 
-# Deploy using ECS task definition
-```
+**AWS / Azure / GCP**:
+- Use container services (ECS, Container Apps, Cloud Run)
+- Configure PostgreSQL database
+- Set up file storage (S3, Azure Blob, GCS)
+- Configure environment variables
 
-#### Azure Container Apps
-```bash
-# Build and push to ACR
-az acr build --registry <registry> --image ai-document-processor .
+## Performance & Scaling
 
-# Deploy to Container Apps
-az containerapp create --resource-group <rg> --name ai-doc-processor --image <acr-uri>
-```
+### Current Limits
+- Max file size: 10MB per file
+- File serving limit: 50MB (prevents memory issues)
+- Supported formats: PDF, DOCX, TXT
+- Processing: Asynchronous (non-blocking)
 
-#### Google Cloud Run
-```bash
-# Build and push to GCR
-gcloud builds submit --tag gcr.io/<project>/ai-document-processor
-
-# Deploy to Cloud Run
-gcloud run deploy --image gcr.io/<project>/ai-document-processor --platform managed
-```
-
-## Scaling Considerations
-
-### Horizontal Scaling
-- Stateless application design
-- External session storage (Redis)
-- Load balancer compatible
-
-### Storage Scaling
-- S3-compatible storage abstraction
-- CDN integration ready
-- File processing queue system
-
-### Database Scaling
-- Read replicas support
-- Connection pooling
-- Database migrations with Prisma
-
-### Performance Optimization
-- Next.js static generation
-- Image optimization
-- API response caching
-- File upload streaming
+### Optimization Tips
+- Use PostgreSQL for production (better than SQLite)
+- Enable OpenAI API for better AI results
+- Consider Redis for session storage at scale
+- Use S3/CDN for file storage in production
+- Implement rate limiting for API endpoints
 
 ## Security Features
 
-- JWT token authentication
-- Password hashing with bcrypt
-- File type and size validation
-- SQL injection prevention (Prisma)
-- XSS protection
-- Rate limiting ready
-- Environment variable security
-
-## Development
-
-### Scripts
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run db:generate` - Generate Prisma client
-- `npm run db:migrate` - Run database migrations
-- `./scripts/setup.sh` - Initial project setup
-- `./scripts/dev.sh` - Start development environment
-
-### Testing
-```bash
-# Add your testing framework
-npm install --save-dev jest @testing-library/react
-```
+- ✅ JWT token authentication with httpOnly cookies
+- ✅ Password hashing with bcrypt (10 rounds)
+- ✅ File type validation (PDF, DOCX, TXT only)
+- ✅ File size validation (10MB limit)
+- ✅ SQL injection prevention (Prisma ORM)
+- ✅ XSS protection (React escaping)
+- ✅ Environment variable security
+- ✅ User-specific document access control
+- ⚠️ Rate limiting (ready to implement)
+- ⚠️ CSRF protection (recommended for production)
 
 ## Contributing
 
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Commit changes: `git commit -m 'Add amazing feature'`
+4. Push to branch: `git push origin feature/amazing-feature`
+5. Open a Pull Request
 
 ## License
 
@@ -251,10 +313,11 @@ MIT License - see LICENSE file for details
 ## Support
 
 For issues and questions:
-1. Check the documentation
-2. Search existing issues
-3. Create a new issue with detailed information
+1. Check this README documentation
+2. Review the troubleshooting section
+3. Check server console logs
+4. Create a GitHub issue with detailed information
 
 ---
 
-**Note**: This is a production-ready template. Customize according to your specific requirements and security policies.
+**Built with ❤️ using Next.js 15, TypeScript, and OpenAI**
