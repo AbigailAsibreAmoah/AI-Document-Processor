@@ -1,3 +1,4 @@
+import { ProtectedRoute } from '../components/protected-route';
 import { Sidebar } from './sidebar';
 import { Header } from './header';
 
@@ -7,16 +8,18 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   return (
-    <div className="h-screen flex bg-gray-50">
-      <Sidebar />
-      
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <Header />
+    <ProtectedRoute>
+      <div className="h-screen flex bg-gray-50">
+        <Sidebar />
         
-        <main className="flex-1 overflow-auto p-6">
-          {children}
-        </main>
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <Header />
+          
+          <main className="flex-1 overflow-auto p-6">
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+    </ProtectedRoute>
   );
 }

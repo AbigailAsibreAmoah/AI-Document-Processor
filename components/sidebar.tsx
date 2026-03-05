@@ -8,8 +8,11 @@ import {
   Upload, 
   FileText, 
   Settings,
-  LogOut
+  LogOut,
+  Brain,
+  Zap
 } from 'lucide-react';
+import { useAuth } from '../lib/auth-context';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -20,13 +23,26 @@ const navigation = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { logout } = useAuth();
 
   return (
-    <div className="flex h-full w-64 flex-col bg-gray-900">
+    <div className="flex h-full w-64 flex-col bg-gradient-to-b from-gray-900 to-gray-800">
       <div className="flex h-16 items-center px-6">
-        <h1 className="text-xl font-semibold text-white">
-          AI Document Processor
-        </h1>
+        <div className="flex items-center space-x-3">
+          <div className="relative">
+            <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center">
+              <Brain className="w-5 h-5 text-white" />
+            </div>
+            <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-gradient-to-r from-emerald-400 to-cyan-400 rounded-full flex items-center justify-center">
+              <Zap className="w-1 h-1 text-white" />
+            </div>
+          </div>
+          <div>
+            <h1 className="text-lg font-bold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
+              DocuMind AI
+            </h1>
+          </div>
+        </div>
       </div>
       
       <nav className="flex-1 space-y-1 px-3 py-4">
@@ -39,7 +55,7 @@ export function Sidebar() {
               className={cn(
                 'group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors',
                 isActive
-                  ? 'bg-gray-800 text-white'
+                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg'
                   : 'text-gray-300 hover:bg-gray-700 hover:text-white'
               )}
             >
@@ -51,7 +67,10 @@ export function Sidebar() {
       </nav>
 
       <div className="p-3">
-        <button className="group flex w-full items-center px-3 py-2 text-sm font-medium text-gray-300 rounded-md hover:bg-gray-700 hover:text-white transition-colors">
+        <button 
+          onClick={logout}
+          className="group flex w-full items-center px-3 py-2 text-sm font-medium text-gray-300 rounded-md hover:bg-gray-700 hover:text-white transition-colors"
+        >
           <LogOut className="mr-3 h-5 w-5" />
           Sign Out
         </button>

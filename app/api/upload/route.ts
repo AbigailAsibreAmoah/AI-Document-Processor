@@ -1,1 +1,77 @@
-import { NextRequest, NextResponse } from 'next/server';\nimport { DocumentService } from '../../../services/document';\nimport { validateFileType, validateFileSize } from '../../../lib/utils';\n\nconst documentService = new DocumentService();\n\nexport async function POST(request: NextRequest) {\n  try {\n    const formData = await request.formData();\n    const file = formData.get('file') as File;\n    const userId = formData.get('userId') as string; // In real app, get from JWT token\n\n    if (!file) {\n      return NextResponse.json(\n        { success: false, error: 'No file provided' },\n        { status: 400 }\n      );\n    }\n\n    if (!userId) {\n      return NextResponse.json(\n        { success: false, error: 'User not authenticated' },\n        { status: 401 }\n      );\n    }\n\n    // Validate file type\n    if (!validateFileType(file)) {\n      return NextResponse.json(\n        { success: false, error: 'Invalid file type. Only PDF, DOCX, and TXT files are allowed.' },\n        { status: 400 }\n      );\n    }\n\n    // Validate file size\n    if (!validateFileSize(file)) {\n      return NextResponse.json(\n        { success: false, error: 'File size exceeds 10MB limit.' },\n        { status: 400 }\n      );\n    }\n\n    // Convert file to buffer\n    const buffer = Buffer.from(await file.arrayBuffer());\n    \n    // Generate unique filename\n    const timestamp = Date.now();\n    const filename = `${timestamp}_${file.name}`;\n\n    // Upload document\n    const document = await documentService.uploadDocument(\n      buffer,\n      filename,\n      file.name,\n      file.type,\n      file.size,\n      userId\n    );\n\n    return NextResponse.json({\n      success: true,\n      document\n    });\n  } catch (error) {\n    console.error('Upload error:', error);\n    return NextResponse.json(\n      { success: false, error: 'Internal server error' },\n      { status: 500 }\n    );\n  }\n}
+import { NextRequest, NextResponse } from 'next/server';
+import { DocumentService } from '../../../services/document';
+import { AuthService } from '../../../services/auth';
+import { validateFileType, validateFileSize } from '../../../lib/utils';
+
+const documentService = new DocumentService();
+const authService = new AuthService();
+
+export async function POST(request: NextRequest) {
+  try {
+    const authHeader = request.headers.get('authorization');
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.substring(7);
+    const decoded = await authService.verifyToken(token);
+    
+    const formData = await request.formData();
+    const file = formData.get('file') as File;
+
+    if (!file) {
+      return NextResponse.json(
+        { success: false, error: 'No file provided' },
+        { status: 400 }
+      );
+    }
+
+    // Validate file type
+    if (!validateFileType(file)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid file type. Only PDF, DOCX, and TXT files are allowed.' },
+        { status: 400 }
+      );
+    }
+
+    // Validate file size
+    if (!validateFileSize(file)) {
+      return NextResponse.json(
+        { success: false, error: 'File size exceeds 10MB limit.' },
+        { status: 400 }
+      );
+    }
+
+    // Convert file to buffer
+    const buffer = Buffer.from(await file.arrayBuffer());
+    
+    // Generate unique filename
+    const timestamp = Date.now();
+    const filename = `${timestamp}_${file.name}`;
+
+    // Upload document
+    const document = await documentService.uploadDocument(
+      buffer,
+      filename,
+      file.name,
+      file.type,
+      file.size,
+      decoded.userId
+    );
+
+    return NextResponse.json({
+      success: true,
+      document
+    });
+  } catch (error) {
+    console.error('Upload error:', error);
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}

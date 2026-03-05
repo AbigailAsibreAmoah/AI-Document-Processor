@@ -1,7 +1,7 @@
 import { prisma } from '../database';
 import { StorageService } from './storage';
 import { AIService } from '../ai';
-import { DocumentStatus, Document, ProcessingResult } from '../types';
+import { Document, ProcessingResult } from '../types';
 import * as pdfParse from 'pdf-parse';
 import * as mammoth from 'mammoth';
 
@@ -29,33 +29,43 @@ export class DocumentService {
         size,
         filePath,
         userId,
-        status: DocumentStatus.UPLOADED,
+        status: 'UPLOADED',
       },
     });
 
     // Start processing asynchronously
     this.processDocumentAsync(document.id, file, mimeType);
 
-    return document;
+    return document as Document;
   }
 
   async getDocuments(userId: string): Promise<Document[]> {
-    return prisma.document.findMany({
+    const docs = await prisma.document.findMany({
       where: { userId },
       orderBy: { uploadedAt: 'desc' },
     });
+    return docs as Document[];
   }
 
   async getDocument(id: string, userId: string): Promise<Document | null> {
-    return prisma.document.findFirst({
+    const doc = await prisma.document.findFirst({
       where: { id, userId },
     });
+    return doc as Document | null;
   }
 
   async getProcessingResult(documentId: string): Promise<ProcessingResult | null> {
-    return prisma.processingResult.findFirst({
+    const result = await prisma.processingResult.findFirst({
       where: { documentId },
     });
+    
+    if (!result) return null;
+    
+    return {
+      ...result,
+      keyData: result.keyData ? JSON.parse(result.keyData) : null,
+      clauses: result.clauses ? JSON.parse(result.clauses) : null
+    } as ProcessingResult;
   }
 
   async deleteDocument(id: string, userId: string): Promise<void> {
@@ -76,17 +86,23 @@ export class DocumentService {
 
   private async processDocumentAsync(documentId: string, file: Buffer, mimeType: string) {
     try {
+      console.log(`Starting processing for document ${documentId}`);
+      
       // Update status to processing
       await prisma.document.update({
         where: { id: documentId },
-        data: { status: DocumentStatus.PROCESSING },
+        data: { status: 'PROCESSING' },
       });
 
       // Extract text based on file type
+      console.log(`Extracting text from ${mimeType}`);
       const text = await this.extractText(file, mimeType);
+      console.log(`Extracted text length: ${text.length}`);
 
       // Process with AI
+      console.log('Processing with AI service');
       const result = await this.aiService.processDocument(text);
+      console.log('AI processing completed:', result);
 
       // Save processing result
       await prisma.processingResult.create({
@@ -94,8 +110,8 @@ export class DocumentService {
           documentId,
           summary: result.summary,
           extractedText: text,
-          keyData: result.keyData,
-          clauses: result.clauses,
+          keyData: JSON.stringify(result.keyData),
+          clauses: JSON.stringify(result.clauses),
           confidence: result.confidence,
         },
       });
@@ -104,36 +120,44 @@ export class DocumentService {
       await prisma.document.update({
         where: { id: documentId },
         data: { 
-          status: DocumentStatus.COMPLETED,
+          status: 'COMPLETED',
           processedAt: new Date(),
         },
       });
+      
+      console.log(`Document ${documentId} processing completed successfully`);
     } catch (error) {
       console.error('Error processing document:', error);
       
       // Update status to failed
       await prisma.document.update({
         where: { id: documentId },
-        data: { status: DocumentStatus.FAILED },
+        data: { status: 'FAILED' },
       });
     }
   }
 
   private async extractText(file: Buffer, mimeType: string): Promise<string> {
-    switch (mimeType) {
-      case 'application/pdf':
-        const pdfData = await pdfParse(file);
-        return pdfData.text;
-      
-      case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
-        const docxData = await mammoth.extractRawText({ buffer: file });
-        return docxData.value;
-      
-      case 'text/plain':
-        return file.toString('utf-8');
-      
-      default:
-        throw new Error('Unsupported file type');
+    try {
+      switch (mimeType) {
+        case 'application/pdf':
+          const pdfData = await pdfParse(file);
+          return pdfData.text;
+        
+        case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+          const docxData = await mammoth.extractRawText({ buffer: file });
+          return docxData.value;
+        
+        case 'text/plain':
+          return file.toString('utf-8');
+        
+        default:
+          // Fallback for unknown types
+          return file.toString('utf-8');
+      }
+    } catch (error) {
+      console.error('Error extracting text:', error);
+      return 'Error: Could not extract text from this document.';
     }
   }
 }

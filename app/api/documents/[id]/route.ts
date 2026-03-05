@@ -1,1 +1,51 @@
-import { NextRequest, NextResponse } from 'next/server';\nimport { DocumentService } from '../../../../services/document';\n\nconst documentService = new DocumentService();\n\n// GET /api/documents/[id] - Get document details and processing results\nexport async function GET(\n  request: NextRequest,\n  { params }: { params: { id: string } }\n) {\n  try {\n    const { searchParams } = new URL(request.url);\n    const userId = searchParams.get('userId'); // In real app, get from JWT token\n\n    if (!userId) {\n      return NextResponse.json(\n        { success: false, error: 'User not authenticated' },\n        { status: 401 }\n      );\n    }\n\n    const document = await documentService.getDocument(params.id, userId);\n    \n    if (!document) {\n      return NextResponse.json(\n        { success: false, error: 'Document not found' },\n        { status: 404 }\n      );\n    }\n\n    const processingResult = await documentService.getProcessingResult(params.id);\n\n    return NextResponse.json({\n      success: true,\n      data: {\n        document,\n        processingResult\n      }\n    });\n  } catch (error) {\n    console.error('Get document error:', error);\n    return NextResponse.json(\n      { success: false, error: 'Internal server error' },\n      { status: 500 }\n    );\n  }\n}
+import { NextRequest, NextResponse } from 'next/server';
+import { DocumentService } from '../../../../services/document';
+import { AuthService } from '../../../../services/auth';
+
+const documentService = new DocumentService();
+const authService = new AuthService();
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const authHeader = request.headers.get('authorization');
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.substring(7);
+    const decoded = await authService.verifyToken(token);
+
+    const document = await documentService.getDocument(id, decoded.userId);
+    
+    if (!document) {
+      return NextResponse.json(
+        { success: false, error: 'Document not found' },
+        { status: 404 }
+      );
+    }
+
+    const processingResult = await documentService.getProcessingResult(id);
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        document,
+        processingResult
+      }
+    });
+  } catch (error) {
+    console.error('Get document error:', error);
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}

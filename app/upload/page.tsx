@@ -1,12 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useAuth } from '../../lib/auth-context';
 import { Layout } from '../../components/layout';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Upload, FileText, AlertCircle } from 'lucide-react';
 
 export default function UploadPage() {
+  const { user } = useAuth();
   const [dragActive, setDragActive] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -42,11 +44,44 @@ export default function UploadPage() {
   };
 
   const uploadFiles = async () => {
+    if (!user) return;
+    
     setUploading(true);
-    setTimeout(() => {
-      setUploading(false);
+    
+    try {
+      const results = [];
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('userId', user.id);
+        
+        const response = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        
+        const result = await response.json();
+        results.push({ file: file.name, success: result.success, error: result.error });
+      }
+      
+      const successful = results.filter(r => r.success).length;
+      const failed = results.filter(r => !r.success).length;
+      
       setFiles([]);
-    }, 2000);
+      
+      if (failed === 0) {
+        alert(`Successfully uploaded ${successful} file(s). AI processing has started and will complete shortly.`);
+      } else {
+        alert(`Uploaded ${successful} file(s) successfully. ${failed} file(s) failed to upload.`);
+      }
+    } catch (error) {
+      alert('Upload failed. Please check your connection and try again.');
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
@@ -90,11 +125,13 @@ export default function UploadPage() {
                 className="hidden"
                 id="file-upload"
               />
-              <label htmlFor="file-upload">
-                <Button variant="outline" className="cursor-pointer">
-                  Select Files
-                </Button>
-              </label>
+              <Button 
+                variant="outline" 
+                type="button"
+                onClick={() => document.getElementById('file-upload')?.click()}
+              >
+                Select Files
+              </Button>
               <p className="text-xs text-gray-500 mt-4">
                 Supported formats: PDF, DOCX, TXT (Max 10MB per file)
               </p>
