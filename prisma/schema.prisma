@@ -1,0 +1,58 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  documents Document[]
+
+  @@map("users")
+}
+
+model Document {
+  id           String    @id @default(cuid())
+  filename     String
+  originalName String
+  mimeType     String
+  size         Int
+  filePath     String
+  status       String @default("UPLOADED")
+  uploadedAt   DateTime  @default(now())
+  processedAt  DateTime?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  processingResults ProcessingResult[]
+
+  @@map("documents")
+}
+
+model ProcessingResult {
+  id          String   @id @default(cuid())
+  summary     String?
+  extractedText String?
+  keyData     String?    // JSON as string for SQLite
+  clauses     String?    // JSON as string for SQLite
+  confidence  Float?
+  processedAt DateTime @default(now())
+
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@map("processing_results")
+}
