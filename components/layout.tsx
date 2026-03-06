@@ -1,6 +1,7 @@
 import { ProtectedRoute } from '../components/protected-route';
 import { Sidebar } from './sidebar';
 import { Header } from './header';
+import { HakunaAI } from './hakuna-ai';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -19,6 +20,8 @@ export function Layout({ children }: LayoutProps) {
             {children}
           </main>
         </div>
+        
+        <HakunaAI />
       </div>
     </ProtectedRoute>
   );

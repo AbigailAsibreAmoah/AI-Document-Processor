@@ -15,10 +15,10 @@ import {
 import { useAuth } from '../lib/auth-context';
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Upload', href: '/upload', icon: Upload },
-  { name: 'Documents', href: '/documents', icon: FileText },
-  { name: 'Settings', href: '/settings', icon: Settings },
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, dataTour: 'dashboard' },
+  { name: 'Upload', href: '/upload', icon: Upload, dataTour: 'upload' },
+  { name: 'Documents', href: '/documents', icon: FileText, dataTour: 'documents' },
+  { name: 'Settings', href: '/settings', icon: Settings, dataTour: '' },
 ];
 
 export function Sidebar() {
@@ -52,6 +52,7 @@ export function Sidebar() {
             <Link
               key={item.name}
               href={item.href}
+              data-tour={item.dataTour || undefined}
               className={cn(
                 'group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors',
                 isActive
