@@ -1,141 +1,115 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useChat } from '@ai-sdk/react';
+import { DefaultChatTransport } from 'ai';
+import { useRef, useEffect, useState } from 'react';
 import { HakunaMessage } from './HakunaMessage';
-import { Send } from 'lucide-react';
-
-interface Message {
-  id: string;
-  text: string;
-  isUser: boolean;
-  timestamp: Date;
-}
+import { Send, RotateCcw } from 'lucide-react';
 
 interface HakunaChatProps {
   onStartTour: () => void;
 }
 
 export function HakunaChat({ onStartTour }: HakunaChatProps) {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      text: "Hi, I'm Hakuna AI 🦁. I can help you navigate the platform and understand your documents.",
-      isUser: false,
-      timestamp: new Date()
-    }
-  ]);
   const [input, setInput] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  const [tokenLoaded, setTokenLoaded] = useState(false);
 
   useEffect(() => {
-    scrollToBottom();
+    setTokenLoaded(true);
+  }, []);
+
+  const { messages, sendMessage, status, error } = useChat({
+    transport: new DefaultChatTransport({
+      api: '/api/hakuna/chat',
+      headers: () => ({
+        Authorization: `Bearer ${localStorage.getItem('token') ?? ''}`,
+      }),
+    }),
+    messages: [
+      {
+        id: 'welcome',
+        role: 'assistant',
+        parts: [{ type: 'text', text: "Hi, I'm Hakuna AI 🦁. I can help you understand documents and navigate the platform." }],
+      }
+    ],
+  });
+
+  const isLoading = status === 'streaming' || status === 'submitted';
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSend = async () => {
-    if (!input.trim()) return;
-
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      text: input,
-      isUser: true,
-      timestamp: new Date()
-    };
-
-    setMessages(prev => [...prev, userMessage]);
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || isLoading) return;
+    sendMessage({ text: input });
     setInput('');
-    setIsTyping(true);
-
-    try {
-      const response = await fetch('/api/hakuna/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ message: input })
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        const aiMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          text: data.response,
-          isUser: false,
-          timestamp: new Date()
-        };
-        setMessages(prev => [...prev, aiMessage]);
-      }
-    } catch (error) {
-      console.error('Chat error:', error);
-    } finally {
-      setIsTyping(false);
-    }
   };
+
+  if (!tokenLoaded) return null;
 
   return (
     <div className="flex flex-col h-full">
-      {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map(msg => (
+        {messages.map((msg) => (
           <HakunaMessage
             key={msg.id}
-            message={msg.text}
-            isUser={msg.isUser}
-            timestamp={msg.timestamp}
+            message={msg.parts
+              .filter((p) => p.type === 'text')
+              .map((p) => (p as { type: 'text'; text: string }).text)
+              .join('')}
+            isUser={msg.role !== 'assistant'}
+            timestamp={new Date()}
           />
         ))}
-        
-        {isTyping && (
+
+        {isLoading && (
           <div className="flex justify-start">
-            <div className="bg-slate-100 rounded-lg px-4 py-2">
-              <div className="flex space-x-2">
-                <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></div>
-                <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-              </div>
+            <div className="bg-slate-100 rounded-lg px-4 py-2 text-sm text-slate-500">
+              Hakuna is thinking...
             </div>
           </div>
         )}
-        
+
+        {error && (
+          <div className="text-red-500 text-sm p-2">
+            {error.message || 'Something went wrong — try again?'}
+          </div>
+        )}
+
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Quick Actions */}
       <div className="px-4 py-2 border-t border-slate-200">
         <button
           onClick={onStartTour}
-          className="text-xs text-slate-600 hover:text-slate-900 underline"
+          className="text-xs text-slate-600 hover:text-slate-900 flex items-center gap-1"
         >
-          🎯 Replay Platform Tour
+          <RotateCcw className="h-3 w-3" /> Replay Platform Tour
         </button>
       </div>
 
-      {/* Input */}
-      <div className="p-4 border-t border-slate-200">
+      <form onSubmit={handleSubmit} className="p-4 border-t border-slate-200">
         <div className="flex space-x-2">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-            placeholder="Ask me anything..."
-            className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500"
+            placeholder="Ask Hakuna anything..."
+            disabled={isLoading}
+            className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 disabled:opacity-50"
           />
           <button
-            onClick={handleSend}
-            disabled={!input.trim() || isTyping}
-            className="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            type="submit"
+            disabled={isLoading || !input.trim()}
+            className="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-800 disabled:opacity-50 transition-colors"
           >
             <Send className="h-5 w-5" />
           </button>
         </div>
-      </div>
+      </form>
     </div>
   );
 }
