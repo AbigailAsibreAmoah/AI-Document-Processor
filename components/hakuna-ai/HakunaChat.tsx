@@ -2,7 +2,7 @@
 
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useMemo } from 'react';
 import { HakunaMessage } from './HakunaMessage';
 import { Send, RotateCcw, Paperclip, Trash2 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
@@ -34,15 +34,25 @@ export function HakunaChat({ onStartTour }: HakunaChatProps) {
 
   const getToken = () => localStorage.getItem('token') ?? '';
 
-  const documentContext = selectedDoc === 'all'
-    ? documents
-    : documents.filter(d => d.name === selectedDoc);
+  // Use a ref so the transport body closure always reads the latest value
+  const documentContextRef = useRef<DocumentContext[]>([]);
+
+  const documentContext = useMemo(
+    () => selectedDoc === 'all' ? documents : documents.filter(d => d.name === selectedDoc),
+    [documents, selectedDoc]
+  );
+
+  // Keep ref in sync with latest documentContext
+  useEffect(() => {
+    documentContextRef.current = documentContext;
+  }, [documentContext]);
 
   const { messages, sendMessage, status, error, setMessages } = useChat({
     transport: new DefaultChatTransport({
       api: '/api/hakuna/chat',
       headers: () => ({ Authorization: `Bearer ${getToken()}` }),
-      body: { documentContext },
+      // FIX: function so documentContext is evaluated fresh on every send
+      body: () => ({ documentContext: documentContextRef.current }),
     }),
     messages: [
       {
@@ -65,7 +75,6 @@ export function HakunaChat({ onStartTour }: HakunaChatProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Save assistant messages to DB when streaming completes
   useEffect(() => {
     if (!historyLoaded || status !== 'ready') return;
     const last = messages[messages.length - 1];
@@ -156,13 +165,11 @@ export function HakunaChat({ onStartTour }: HakunaChatProps) {
 
       const result = await res.json();
       if (result.success) {
-        // Notify user in chat
         setMessages(prev => [...prev, {
           id: `upload-${Date.now()}`,
           role: 'assistant',
           parts: [{ type: 'text', text: `✅ **${file.name}** uploaded successfully! Processing has started — I'll be able to read it shortly. Refresh the page in a minute to load the updated document context.` }],
         }]);
-        // Refresh document context after a delay
         setTimeout(fetchDocuments, 5000);
       } else {
         setMessages(prev => [...prev, {
@@ -198,7 +205,6 @@ export function HakunaChat({ onStartTour }: HakunaChatProps) {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Document selector */}
       {documents.length > 0 && (
         <div className="px-4 py-2 border-b border-slate-200 bg-slate-50">
           <select
