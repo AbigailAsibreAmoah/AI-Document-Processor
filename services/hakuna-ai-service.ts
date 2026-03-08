@@ -98,7 +98,7 @@ export class HakunaAIService {
     }
   }
 
-  async handleChatMessage(message: string): Promise<string> {
+  async handleChatMessage(message: string, history: any): Promise<string> {
     const lowerMessage = message.toLowerCase();
 
     // Platform navigation questions

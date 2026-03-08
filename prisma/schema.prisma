@@ -18,7 +18,8 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  documents Document[]
+  documents    Document[]
+  chatMessages ChatMessage[]  // ← add this
 
   @@map("users")
 }
@@ -55,4 +56,16 @@ model ProcessingResult {
   document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
   @@map("processing_results")
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  role      String   // 'user' | 'assistant'
+  content   String
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("chat_messages")
 }

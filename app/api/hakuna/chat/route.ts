@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     const token = authHeader.substring(7);
     await authService.verifyToken(token);
 
-    const { messages } = await request.json();
+    const { messages, documentContext } = await request.json();
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return new Response(
@@ -53,10 +53,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    let systemPrompt = aiService.getSystemPrompt();
+    if (documentContext && documentContext.length > 0) {
+      const docText = documentContext
+        .map((d: { name: string; text: string }) => `--- ${d.name} ---\n${d.text}`)
+        .join('\n\n');
+      systemPrompt += `\n\nUSER'S UPLOADED DOCUMENTS (use these to answer questions):\n\n${docText}`;
+    }
+
     const result = await streamText({
       model: groq('llama-3.3-70b-versatile'),
-      system: aiService.getSystemPrompt(),
+      system: systemPrompt,
       messages: await convertToModelMessages(messages),
+      toolChoice: 'auto',
       tools: {
         webSearch: {
           description: 'Search the web for current information. Use when the user asks about recent events, news, or anything time-sensitive.',
