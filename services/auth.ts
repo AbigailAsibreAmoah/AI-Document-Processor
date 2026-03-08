@@ -6,7 +6,6 @@ import { User } from '../types';
 
 export class AuthService {
   async register(email: string, password: string, name?: string): Promise<User> {
-    // Check if user exists
     const existingUser = await prisma.user.findUnique({
       where: { email },
     });
@@ -15,10 +14,8 @@ export class AuthService {
       throw new Error('User already exists');
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Create user
     const user = await prisma.user.create({
       data: {
         email,
@@ -30,14 +27,13 @@ export class AuthService {
     return {
       id: user.id,
       email: user.email,
-      name: user.name,
+      name: user.name ?? undefined,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };
   }
 
   async login(email: string, password: string): Promise<{ user: User; token: string }> {
-    // Find user
     const user = await prisma.user.findUnique({
       where: { email },
     });
@@ -46,13 +42,11 @@ export class AuthService {
       throw new Error('Invalid credentials');
     }
 
-    // Verify password
     const isValid = await bcrypt.compare(password, user.password);
     if (!isValid) {
       throw new Error('Invalid credentials');
     }
 
-    // Generate token
     const token = jwt.sign(
       { userId: user.id, email: user.email },
       config.jwt.secret,
@@ -63,7 +57,7 @@ export class AuthService {
       user: {
         id: user.id,
         email: user.email,
-        name: user.name,
+        name: user.name ?? undefined,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       },
@@ -90,7 +84,7 @@ export class AuthService {
     return {
       id: user.id,
       email: user.email,
-      name: user.name,
+      name: user.name ?? undefined,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };

@@ -1,8 +1,7 @@
 // app/api/hakuna/chat/route.ts
 import { NextRequest } from 'next/server';
-import { streamText, stepCountIs, convertToModelMessages } from 'ai';
+import { streamText, convertToModelMessages } from 'ai';
 import { groq } from '@ai-sdk/groq';
-import { z } from 'zod';
 import { AIService } from '@/ai';
 import { AuthService } from '@/services/auth';
 
@@ -11,23 +10,37 @@ const authService = new AuthService();
 
 export const runtime = 'nodejs';
 
-async function tavilySearch(query: string): Promise<{ title: string; url: string; content: string }[]> {
-  const response = await fetch('https://api.tavily.com/search', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      api_key: process.env.TAVILY_API_KEY,
-      query,
-      search_depth: 'basic',
-      max_results: 5,
-    }),
-  });
-  const data = await response.json();
-  return data.results?.map((r: { title: string; url: string; content: string }) => ({
-    title: r.title,
-    url: r.url,
-    content: r.content,
-  })) ?? [];
+async function tavilySearch(query: string): Promise<string> {
+  try {
+    const response = await fetch('https://api.tavily.com/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        api_key: process.env.TAVILY_API_KEY,
+        query,
+        search_depth: 'basic',
+        max_results: 5,
+      }),
+    });
+    const data = await response.json();
+    if (!data.results?.length) return '';
+    return data.results
+      .map((r: { title: string; url: string; content: string }) =>
+        `${r.title}: ${r.content}`)
+      .join('\n\n');
+  } catch {
+    return '';
+  }
+}
+
+function needsWebSearch(message: string): boolean {
+  const keywords = [
+    'latest', 'current', 'today', 'news', 'recent', 'now', 'price',
+    'market', 'economy', 'stock', 'weather', '2025', '2026', 'update',
+    'happening', 'right now', 'this week', 'this month', 'this year'
+  ];
+  const lower = message.toLowerCase();
+  return keywords.some(k => lower.includes(k));
 }
 
 export async function POST(request: NextRequest) {
@@ -53,7 +66,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get last user message
+    const lastUserMessage = [...messages].reverse().find((m: { role: string }) => m.role === 'user');
+    const lastText = lastUserMessage?.parts
+      ?.filter((p: { type: string }) => p.type === 'text')
+      ?.map((p: { type: string; text?: string }) => p.text ?? '')
+      ?.join('') ?? lastUserMessage?.content ?? '';
+
+    // Build system prompt
     let systemPrompt = aiService.getSystemPrompt();
+
+    // Auto web search if needed
+    if (lastText && needsWebSearch(lastText)) {
+      const webResults = await tavilySearch(lastText);
+      if (webResults) {
+        systemPrompt += `\n\nLIVE WEB SEARCH RESULTS (use these for current information):\n\n${webResults}`;
+      }
+    }
+
+    // Inject document context
     if (documentContext && documentContext.length > 0) {
       const docText = documentContext
         .map((d: { name: string; text: string }) => `--- ${d.name} ---\n${d.text}`)
@@ -65,17 +96,6 @@ export async function POST(request: NextRequest) {
       model: groq('llama-3.3-70b-versatile'),
       system: systemPrompt,
       messages: await convertToModelMessages(messages),
-      toolChoice: 'auto',
-      tools: {
-        webSearch: {
-          description: 'Search the web for current information. Use when the user asks about recent events, news, or anything time-sensitive.',
-          inputSchema: z.object({
-            query: z.string().describe('The search query'),
-          }),
-          execute: async ({ query }: { query: string }) => tavilySearch(query),
-        },
-      },
-      stopWhen: stepCountIs(3),
     });
 
     return result.toUIMessageStreamResponse();
