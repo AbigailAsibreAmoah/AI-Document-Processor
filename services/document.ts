@@ -62,6 +62,7 @@ export class DocumentService {
       ...result,
       keyData: result.keyData ? JSON.parse(result.keyData) : null,
       clauses: result.clauses ? JSON.parse(result.clauses) : null,
+      tags: result.tags ? JSON.parse(result.tags) : [],
     } as ProcessingResult;
   }
 
@@ -104,6 +105,10 @@ export class DocumentService {
           keyData: JSON.stringify(result.keyData),
           clauses: JSON.stringify(result.clauses),
           confidence: result.confidence,
+          documentType: result.documentType,
+          category: result.category,
+          tags: JSON.stringify(result.tags),
+          recommendation: result.recommendation,
         },
       });
 

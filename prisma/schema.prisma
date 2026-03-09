@@ -19,7 +19,7 @@ model User {
   updatedAt DateTime @updatedAt
 
   documents    Document[]
-  chatMessages ChatMessage[]  // ← add this
+  chatMessages ChatMessage[]
 
   @@map("users")
 }
@@ -31,7 +31,7 @@ model Document {
   mimeType     String
   size         Int
   filePath     String
-  status       String @default("UPLOADED")
+  status       String    @default("UPLOADED")
   uploadedAt   DateTime  @default(now())
   processedAt  DateTime?
 
@@ -44,13 +44,17 @@ model Document {
 }
 
 model ProcessingResult {
-  id          String   @id @default(cuid())
-  summary     String?
-  extractedText String?
-  keyData     String?    // JSON as string for SQLite
-  clauses     String?    // JSON as string for SQLite
-  confidence  Float?
-  processedAt DateTime @default(now())
+  id             String   @id @default(cuid())
+  summary        String?
+  extractedText  String?
+  keyData        String?
+  clauses        String?
+  confidence     Float?
+  documentType   String?
+  category       String?
+  tags           String?
+  recommendation String?
+  processedAt    DateTime @default(now())
 
   documentId String
   document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
@@ -60,7 +64,7 @@ model ProcessingResult {
 
 model ChatMessage {
   id        String   @id @default(cuid())
-  role      String   // 'user' | 'assistant'
+  role      String
   content   String
   createdAt DateTime @default(now())
 

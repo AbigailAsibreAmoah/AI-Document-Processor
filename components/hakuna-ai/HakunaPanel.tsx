@@ -7,9 +7,10 @@ interface HakunaPanelProps {
   isOpen: boolean;
   onClose: () => void;
   onStartTour: () => void;
+  preselectDoc?: string | null;
 }
 
-export function HakunaPanel({ isOpen, onClose, onStartTour }: HakunaPanelProps) {
+export function HakunaPanel({ isOpen, onClose, onStartTour, preselectDoc }: HakunaPanelProps) {
   return (
     <>
       <style>{`
@@ -26,7 +27,6 @@ export function HakunaPanel({ isOpen, onClose, onStartTour }: HakunaPanelProps) 
           overflow: hidden;
         }
 
-        /* Pride Rock silhouette */
         .hk-pride-rock {
           position: absolute;
           bottom: 0; right: -10px;
@@ -36,7 +36,6 @@ export function HakunaPanel({ isOpen, onClose, onStartTour }: HakunaPanelProps) 
           clip-path: polygon(25% 100%, 0% 55%, 18% 35%, 48% 25%, 75% 40%, 100% 100%);
         }
 
-        /* Starfield */
         .hk-stars {
           position: absolute; inset: 0; pointer-events: none;
           background-image:
@@ -49,7 +48,6 @@ export function HakunaPanel({ isOpen, onClose, onStartTour }: HakunaPanelProps) 
             radial-gradient(1.5px 1.5px at 65% 30%, rgba(212,168,67,0.3) 0%, transparent 100%);
         }
 
-        /* Sun glow behind lion */
         .hk-sun {
           position: absolute;
           top: -20px; left: 50%;
@@ -73,7 +71,6 @@ export function HakunaPanel({ isOpen, onClose, onStartTour }: HakunaPanelProps) 
           box-shadow: 0 0 28px rgba(212,168,67,0.4), 0 0 50px rgba(99,102,241,0.3);
         }
 
-        /* Pulse ring around avatar */
         .hk-avatar::after {
           content: '';
           position: absolute; inset: -4px;
@@ -122,12 +119,10 @@ export function HakunaPanel({ isOpen, onClose, onStartTour }: HakunaPanelProps) 
           background: linear-gradient(90deg, transparent 0%, rgba(212,168,67,0.5) 30%, rgba(99,102,241,0.5) 70%, transparent 100%);
         }
 
-        /* Slide animation */
         .hk-slide {
           transition: transform 0.38s cubic-bezier(0.32, 0.72, 0, 1);
         }
 
-        /* Online indicator */
         .hk-online {
           position: absolute; bottom: 2px; right: 2px;
           width: 10px; height: 10px; border-radius: 50%;
@@ -170,7 +165,11 @@ export function HakunaPanel({ isOpen, onClose, onStartTour }: HakunaPanelProps) 
               </div>
               <div>
                 <div className="hk-title">Hakuna AI</div>
-                <div className="hk-subtitle">Hakuna Matata — no worries</div>
+                <div className="hk-subtitle">
+                  {preselectDoc
+                    ? `Viewing: ${preselectDoc.length > 24 ? preselectDoc.substring(0, 24) + '…' : preselectDoc}`
+                    : 'Hakuna Matata — no worries'}
+                </div>
               </div>
             </div>
             <button className="hk-close" onClick={onClose}>
@@ -181,7 +180,7 @@ export function HakunaPanel({ isOpen, onClose, onStartTour }: HakunaPanelProps) 
         </div>
 
         <div className="h-[calc(100%-77px)]">
-          <HakunaChat onStartTour={onStartTour} />
+          <HakunaChat onStartTour={onStartTour} preselectDoc={preselectDoc} />
         </div>
       </div>
     </>
