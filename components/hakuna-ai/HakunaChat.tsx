@@ -34,7 +34,6 @@ export function HakunaChat({ onStartTour }: HakunaChatProps) {
 
   const getToken = () => localStorage.getItem('token') ?? '';
 
-  // Use a ref so the transport body closure always reads the latest value
   const documentContextRef = useRef<DocumentContext[]>([]);
 
   const documentContext = useMemo(
@@ -42,7 +41,6 @@ export function HakunaChat({ onStartTour }: HakunaChatProps) {
     [documents, selectedDoc]
   );
 
-  // Keep ref in sync with latest documentContext
   useEffect(() => {
     documentContextRef.current = documentContext;
   }, [documentContext]);
@@ -51,16 +49,13 @@ export function HakunaChat({ onStartTour }: HakunaChatProps) {
     transport: new DefaultChatTransport({
       api: '/api/hakuna/chat',
       headers: () => ({ Authorization: `Bearer ${getToken()}` }),
-      // FIX: function so documentContext is evaluated fresh on every send
       body: () => ({ documentContext: documentContextRef.current }),
     }),
-    messages: [
-      {
-        id: 'welcome',
-        role: 'assistant',
-        parts: [{ type: 'text', text: welcomeText }],
-      }
-    ],
+    messages: [{
+      id: 'welcome',
+      role: 'assistant',
+      parts: [{ type: 'text', text: welcomeText }],
+    }],
   });
 
   const isLoading = status === 'streaming' || status === 'submitted';
@@ -86,10 +81,7 @@ export function HakunaChat({ onStartTour }: HakunaChatProps) {
     if (!text) return;
     fetch('/api/hakuna/messages', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${getToken()}`,
-      },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
       body: JSON.stringify({ role: last.role, content: text }),
     });
   }, [status]);
@@ -101,8 +93,8 @@ export function HakunaChat({ onStartTour }: HakunaChatProps) {
       });
       const data = await res.json();
       if (data.success) setDocuments(data.data);
-    } catch (error) {
-      console.error('Failed to fetch documents:', error);
+    } catch (err) {
+      console.error('Failed to fetch documents:', err);
     }
   };
 
@@ -114,21 +106,16 @@ export function HakunaChat({ onStartTour }: HakunaChatProps) {
       const data = await res.json();
       if (data.success && data.data.length > 0) {
         const historyMessages = data.data.map((m: { id: string; role: string; content: string }) => ({
-          id: m.id,
-          role: m.role,
+          id: m.id, role: m.role,
           parts: [{ type: 'text', text: m.content }],
         }));
-        setMessages([
-          {
-            id: 'welcome',
-            role: 'assistant',
-            parts: [{ type: 'text', text: welcomeText }],
-          },
-          ...historyMessages,
-        ]);
+        setMessages([{
+          id: 'welcome', role: 'assistant',
+          parts: [{ type: 'text', text: welcomeText }],
+        }, ...historyMessages]);
       }
-    } catch (error) {
-      console.error('Failed to fetch history:', error);
+    } catch (err) {
+      console.error('Failed to fetch history:', err);
     } finally {
       setHistoryLoaded(true);
     }
@@ -141,8 +128,7 @@ export function HakunaChat({ onStartTour }: HakunaChatProps) {
       headers: { Authorization: `Bearer ${getToken()}` },
     });
     setMessages([{
-      id: 'welcome',
-      role: 'assistant',
+      id: 'welcome', role: 'assistant',
       parts: [{ type: 'text', text: welcomeText }],
     }]);
   };
@@ -150,31 +136,25 @@ export function HakunaChat({ onStartTour }: HakunaChatProps) {
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
-
     setUploading(true);
     try {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('userId', user.id);
-
       const res = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
+        method: 'POST', body: formData,
         headers: { Authorization: `Bearer ${getToken()}` },
       });
-
       const result = await res.json();
       if (result.success) {
         setMessages(prev => [...prev, {
-          id: `upload-${Date.now()}`,
-          role: 'assistant',
-          parts: [{ type: 'text', text: `✅ **${file.name}** uploaded successfully! Processing has started — I'll be able to read it shortly. Refresh the page in a minute to load the updated document context.` }],
+          id: `upload-${Date.now()}`, role: 'assistant',
+          parts: [{ type: 'text', text: `✅ **${file.name}** uploaded! Processing started — I'll be able to read it shortly.` }],
         }]);
         setTimeout(fetchDocuments, 5000);
       } else {
         setMessages(prev => [...prev, {
-          id: `upload-error-${Date.now()}`,
-          role: 'assistant',
+          id: `upload-error-${Date.now()}`, role: 'assistant',
           parts: [{ type: 'text', text: `❌ Upload failed: ${result.error}` }],
         }]);
       }
@@ -191,10 +171,7 @@ export function HakunaChat({ onStartTour }: HakunaChatProps) {
     if (!input.trim() || isLoading) return;
     fetch('/api/hakuna/messages', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${getToken()}`,
-      },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
       body: JSON.stringify({ role: 'user', content: input }),
     });
     sendMessage({ text: input });
@@ -204,13 +181,62 @@ export function HakunaChat({ onStartTour }: HakunaChatProps) {
   if (!tokenLoaded) return null;
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full" style={{
+      background: 'linear-gradient(160deg, #0d1117 0%, #111827 40%, #1a1f2e 100%)',
+    }}>
+
+      <style>{`
+        .hk-scrollbar::-webkit-scrollbar { width: 4px; }
+        .hk-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .hk-scrollbar::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.3); border-radius: 2px; }
+        .hk-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(99,102,241,0.5); }
+
+        @keyframes hk-dot-pulse {
+          0%, 80%, 100% { transform: scale(0.55); opacity: 0.35; }
+          40% { transform: scale(1); opacity: 1; }
+        }
+
+        .hk-input:focus {
+          border-color: rgba(139,92,246,0.6) !important;
+          box-shadow: 0 0 0 3px rgba(99,102,241,0.1) !important;
+        }
+
+        .hk-send:hover:not(:disabled) {
+          box-shadow: 0 4px 20px rgba(99,102,241,0.5) !important;
+          transform: translateY(-1px);
+        }
+
+        .hk-attach:hover:not(:disabled) {
+          background: rgba(212,168,67,0.18) !important;
+          border-color: rgba(212,168,67,0.45) !important;
+        }
+
+        .hk-select option {
+          background: #1e2433;
+          color: #c8d1e8;
+        }
+      `}</style>
+
+      {/* Document selector */}
       {documents.length > 0 && (
-        <div className="px-4 py-2 border-b border-slate-200 bg-slate-50">
+        <div style={{
+          padding: '8px 12px',
+          borderBottom: '1px solid rgba(99,102,241,0.15)',
+          background: 'rgba(15,23,42,0.6)',
+        }}>
           <select
             value={selectedDoc}
             onChange={(e) => setSelectedDoc(e.target.value)}
-            className="w-full text-xs px-2 py-1 border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-slate-500"
+            className="hk-select"
+            style={{
+              width: '100%', fontSize: '11px', padding: '6px 10px',
+              background: 'linear-gradient(135deg, #1e2433 0%, #1a1f30 100%)',
+              border: '1px solid rgba(99,102,241,0.3)',
+              borderRadius: '8px', color: '#a5b4fc',
+              fontFamily: "'Cinzel', serif", letterSpacing: '0.04em',
+              outline: 'none', cursor: 'pointer',
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.03)',
+            }}
           >
             <option value="all">📁 All documents</option>
             {documents.map((d) => (
@@ -220,85 +246,176 @@ export function HakunaChat({ onStartTour }: HakunaChatProps) {
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      {/* Messages */}
+      <div
+        className="hk-scrollbar flex-1 overflow-y-auto p-4"
+        style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(99,102,241,0.3) transparent' }}
+      >
         {messages.map((msg) => (
           <HakunaMessage
             key={msg.id}
-            message={msg.parts
-              .filter((p) => p.type === 'text')
-              .map((p) => (p as { type: 'text'; text: string }).text)
-              .join('')}
+            message={msg.parts.filter(p => p.type === 'text').map(p => (p as { type: 'text'; text: string }).text).join('')}
             isUser={msg.role !== 'assistant'}
             timestamp={new Date()}
           />
         ))}
 
+        {/* Typing indicator */}
         {(isLoading || uploading) && (
-          <div className="flex justify-start">
-            <div className="bg-slate-100 rounded-lg px-4 py-2 text-sm text-slate-500">
-              {uploading ? 'Uploading document...' : 'Hakuna is thinking...'}
+          <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '12px' }}>
+            <div style={{
+              background: 'linear-gradient(135deg, #1e2433 0%, #1a1f30 100%)',
+              border: '1px solid rgba(99,102,241,0.25)',
+              borderRadius: '4px 18px 18px 18px',
+              padding: '12px 16px',
+              display: 'flex', alignItems: 'center', gap: '5px',
+            }}>
+              {[0, 1, 2].map(i => (
+                <div key={i} style={{
+                  width: '7px', height: '7px', borderRadius: '50%',
+                  background: i === 1 ? '#D4A843' : '#6366f1',
+                  animation: 'hk-dot-pulse 1.3s ease-in-out infinite',
+                  animationDelay: `${i * 0.18}s`,
+                }} />
+              ))}
             </div>
           </div>
         )}
 
         {error && (
-          <div className="text-red-500 text-sm p-2">
+          <div style={{
+            color: '#f87171', fontSize: '12px', padding: '10px 14px',
+            background: 'rgba(239,68,68,0.08)', borderRadius: '10px',
+            border: '1px solid rgba(239,68,68,0.2)',
+            fontFamily: "'Crimson Pro', serif",
+          }}>
             {error.message || 'Something went wrong — try again?'}
           </div>
         )}
-
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="px-4 py-2 border-t border-slate-200 flex items-center justify-between">
+      {/* Footer actions */}
+      <div style={{
+        padding: '6px 14px',
+        borderTop: '1px solid rgba(99,102,241,0.1)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        background: 'rgba(10,12,20,0.7)',
+      }}>
         <button
           onClick={onStartTour}
-          className="text-xs text-slate-600 hover:text-slate-900 flex items-center gap-1"
+          style={{
+            fontSize: '10px', display: 'flex', alignItems: 'center', gap: '5px',
+            fontFamily: "'Cinzel', serif", letterSpacing: '0.05em',
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: '#4b5563', transition: 'color 0.2s',
+          }}
+          onMouseEnter={e => (e.currentTarget.style.color = '#a78bfa')}
+          onMouseLeave={e => (e.currentTarget.style.color = '#4b5563')}
         >
-          <RotateCcw className="h-3 w-3" /> Replay Platform Tour
+          <RotateCcw size={10} /> Tour
         </button>
         <button
           onClick={clearHistory}
-          className="text-xs text-red-400 hover:text-red-600 flex items-center gap-1"
+          style={{
+            fontSize: '10px', display: 'flex', alignItems: 'center', gap: '5px',
+            fontFamily: "'Cinzel', serif", letterSpacing: '0.05em',
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: '#4b5563', transition: 'color 0.2s',
+          }}
+          onMouseEnter={e => (e.currentTarget.style.color = '#f87171')}
+          onMouseLeave={e => (e.currentTarget.style.color = '#4b5563')}
         >
-          <Trash2 className="h-3 w-3" /> Clear history
+          <Trash2 size={10} /> Clear
         </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="p-4 border-t border-slate-200">
-        <div className="flex space-x-2">
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileUpload}
-            accept=".pdf,.docx,.txt"
-            className="hidden"
-          />
+      {/* Input area */}
+      <form
+        onSubmit={handleSubmit}
+        style={{
+          padding: '10px 12px',
+          borderTop: '1px solid rgba(99,102,241,0.15)',
+          background: 'linear-gradient(180deg, #0f1117 0%, #0d1117 100%)',
+        }}
+      >
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".pdf,.docx,.txt" className="hidden" />
+
+          {/* Attach button */}
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
-            className="px-3 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 transition-colors"
+            className="hk-attach"
+            style={{
+              padding: '9px',
+              background: 'rgba(212,168,67,0.08)',
+              border: '1px solid rgba(212,168,67,0.25)',
+              borderRadius: '10px', color: '#D4A843',
+              cursor: 'pointer', flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'all 0.2s',
+            }}
             title="Upload document"
           >
-            <Paperclip className="h-5 w-5 text-slate-500" />
+            <Paperclip size={15} />
           </button>
+
+          {/* Text input */}
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask Hakuna anything..."
             disabled={isLoading}
-            className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 disabled:opacity-50"
+            className="hk-input"
+            style={{
+              flex: 1, padding: '9px 14px',
+              background: 'linear-gradient(135deg, #1a1f2e 0%, #1e2433 100%)',
+              border: '1px solid rgba(99,102,241,0.25)',
+              borderRadius: '12px', color: '#c8d1e8',
+              fontSize: '13px', fontFamily: "'Crimson Pro', serif",
+              outline: 'none', transition: 'all 0.2s',
+            }}
           />
+
+          {/* Send button */}
           <button
             type="submit"
             disabled={isLoading || !input.trim()}
-            className="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-800 disabled:opacity-50 transition-colors"
+            className="hk-send"
+            style={{
+              padding: '9px 13px',
+              background: input.trim() && !isLoading
+                ? 'linear-gradient(135deg, #4338ca 0%, #6366f1 50%, #7c3aed 100%)'
+                : 'rgba(99,102,241,0.1)',
+              border: '1px solid rgba(99,102,241,0.35)',
+              borderRadius: '10px',
+              color: input.trim() && !isLoading ? '#e0e7ff' : '#374151',
+              cursor: input.trim() && !isLoading ? 'pointer' : 'not-allowed',
+              flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'all 0.2s',
+              boxShadow: input.trim() && !isLoading ? '0 2px 12px rgba(99,102,241,0.3)' : 'none',
+            }}
           >
-            <Send className="h-5 w-5" />
+            <Send size={15} />
           </button>
         </div>
+
+        {/* Character hint */}
+        {input.length > 0 && (
+          <div style={{
+            marginTop: '5px', paddingLeft: '52px',
+            fontSize: '10px', color: '#374151',
+            fontFamily: "'Cinzel', serif",
+            display: 'flex', justifyContent: 'flex-end',
+          }}>
+            <span style={{ color: input.length > 400 ? '#f87171' : '#4b5563' }}>
+              {input.length} chars
+            </span>
+          </div>
+        )}
       </form>
     </div>
   );

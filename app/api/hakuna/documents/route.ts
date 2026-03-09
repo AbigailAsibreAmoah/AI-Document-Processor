@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
 
     const documentsContext = results.map(r => ({
       name: r.document.originalName,
-      text: r.extractedText?.substring(0, 10000) ?? '',
+      text: r.extractedText?.substring(0, 3000) ?? '',
     }));
 
     return NextResponse.json({ success: true, data: documentsContext });

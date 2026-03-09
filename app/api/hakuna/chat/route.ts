@@ -19,14 +19,14 @@ async function tavilySearch(query: string): Promise<string> {
         api_key: process.env.TAVILY_API_KEY,
         query,
         search_depth: 'basic',
-        max_results: 5,
+        max_results: 3,
       }),
     });
     const data = await response.json();
     if (!data.results?.length) return '';
     return data.results
       .map((r: { title: string; url: string; content: string }) =>
-        `${r.title}: ${r.content}`)
+        `${r.title}: ${r.content.substring(0, 500)}`)
       .join('\n\n');
   } catch {
     return '';
@@ -84,10 +84,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Inject document context
+    // Inject document context (capped at 3000 chars per doc to save tokens)
     if (documentContext && documentContext.length > 0) {
       const docText = documentContext
-        .map((d: { name: string; text: string }) => `--- ${d.name} ---\n${d.text}`)
+        .map((d: { name: string; text: string }) =>
+          `--- ${d.name} ---\n${d.text.substring(0, 3000)}`)
         .join('\n\n');
       systemPrompt += `\n\nUSER'S UPLOADED DOCUMENTS (use these to answer questions):\n\n${docText}`;
     }
@@ -96,6 +97,7 @@ export async function POST(request: NextRequest) {
       model: groq('llama-3.3-70b-versatile'),
       system: systemPrompt,
       messages: await convertToModelMessages(messages),
+      maxOutputTokens: 500,
     });
 
     return result.toUIMessageStreamResponse();
