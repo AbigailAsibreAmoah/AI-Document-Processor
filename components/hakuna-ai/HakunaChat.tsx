@@ -4,7 +4,7 @@ import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
 import { useRef, useEffect, useState, useMemo } from 'react';
 import { HakunaMessage } from './HakunaMessage';
-import { Send, RotateCcw, Paperclip, Trash2 } from 'lucide-react';
+import { Send, RotateCcw, Paperclip, Trash2, Type } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 
 interface HakunaChatProps {
@@ -23,6 +23,9 @@ export function HakunaChat({ onStartTour }: HakunaChatProps) {
   const [selectedDoc, setSelectedDoc] = useState<string>('all');
   const [historyLoaded, setHistoryLoaded] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [fontSize, setFontSize] = useState(13.5);
+  const [fontFamily, setFontFamily] = useState("'Crimson Pro', Georgia, serif");
+  const [showFontControls, setShowFontControls] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
@@ -215,6 +218,11 @@ export function HakunaChat({ onStartTour }: HakunaChatProps) {
           background: #1e2433;
           color: #c8d1e8;
         }
+
+        .hk-font-select option {
+          background: #1e2433;
+          color: #c8d1e8;
+        }
       `}</style>
 
       {/* Document selector */}
@@ -246,6 +254,45 @@ export function HakunaChat({ onStartTour }: HakunaChatProps) {
         </div>
       )}
 
+      {/* Font controls panel */}
+      {showFontControls && (
+        <div style={{
+          padding: '8px 12px',
+          borderBottom: '1px solid rgba(99,102,241,0.15)',
+          background: 'rgba(15,23,42,0.8)',
+          display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap',
+        }}>
+          <span style={{ fontSize: '10px', color: '#4b5563', fontFamily: "'Cinzel', serif" }}>Font:</span>
+          <select
+            value={fontFamily}
+            onChange={(e) => setFontFamily(e.target.value)}
+            className="hk-font-select"
+            style={{
+              fontSize: '11px', padding: '4px 8px',
+              background: '#1e2433', border: '1px solid rgba(99,102,241,0.3)',
+              borderRadius: '6px', color: '#a5b4fc',
+              outline: 'none', cursor: 'pointer',
+            }}
+          >
+            <option value="'Crimson Pro', Georgia, serif">Crimson Pro</option>
+            <option value="Georgia, serif">Georgia</option>
+            <option value="'Inter', sans-serif">Inter</option>
+            <option value="system-ui, sans-serif">System</option>
+            <option value="'Courier New', monospace">Courier New</option>
+          </select>
+          <span style={{ fontSize: '10px', color: '#4b5563', fontFamily: "'Cinzel', serif" }}>Size:</span>
+          <input
+            type="range" min={11} max={18} step={0.5}
+            value={fontSize}
+            onChange={(e) => setFontSize(parseFloat(e.target.value))}
+            style={{ width: '80px', accentColor: '#6366f1' }}
+          />
+          <span style={{ fontSize: '10px', color: '#6366f1', fontFamily: "'Cinzel', serif" }}>
+            {fontSize}px
+          </span>
+        </div>
+      )}
+
       {/* Messages */}
       <div
         className="hk-scrollbar flex-1 overflow-y-auto p-4"
@@ -257,6 +304,8 @@ export function HakunaChat({ onStartTour }: HakunaChatProps) {
             message={msg.parts.filter(p => p.type === 'text').map(p => (p as { type: 'text'; text: string }).text).join('')}
             isUser={msg.role !== 'assistant'}
             timestamp={new Date()}
+            fontSize={fontSize}
+            fontFamily={fontFamily}
           />
         ))}
 
@@ -315,6 +364,21 @@ export function HakunaChat({ onStartTour }: HakunaChatProps) {
         >
           <RotateCcw size={10} /> Tour
         </button>
+
+        <button
+          onClick={() => setShowFontControls(v => !v)}
+          style={{
+            fontSize: '10px', display: 'flex', alignItems: 'center', gap: '5px',
+            fontFamily: "'Cinzel', serif", letterSpacing: '0.05em',
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: showFontControls ? '#a78bfa' : '#4b5563', transition: 'color 0.2s',
+          }}
+          onMouseEnter={e => (e.currentTarget.style.color = '#a78bfa')}
+          onMouseLeave={e => (e.currentTarget.style.color = showFontControls ? '#a78bfa' : '#4b5563')}
+        >
+          <Type size={10} /> Font
+        </button>
+
         <button
           onClick={clearHistory}
           style={{
@@ -375,7 +439,7 @@ export function HakunaChat({ onStartTour }: HakunaChatProps) {
               background: 'linear-gradient(135deg, #1a1f2e 0%, #1e2433 100%)',
               border: '1px solid rgba(99,102,241,0.25)',
               borderRadius: '12px', color: '#c8d1e8',
-              fontSize: '13px', fontFamily: "'Crimson Pro', serif",
+              fontSize: '13px', fontFamily,
               outline: 'none', transition: 'all 0.2s',
             }}
           />

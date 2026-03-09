@@ -3,28 +3,48 @@
 import { Bell, Search, User } from 'lucide-react';
 import { useAuth } from '../lib/auth-context';
 import { Button } from './ui/button';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useState, useEffect } from 'react';
 
 export function Header() {
   const { user, logout } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [query, setQuery] = useState(searchParams.get('q') ?? '');
+
+  useEffect(() => {
+    setQuery(searchParams.get('q') ?? '');
+  }, [searchParams]);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!query.trim()) {
+      router.push('/documents');
+    } else {
+      router.push(`/documents?q=${encodeURIComponent(query.trim())}`);
+    }
+  };
 
   return (
     <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
       <div className="flex items-center flex-1">
-        <div className="relative max-w-md w-full">
+        <form onSubmit={handleSearch} className="relative max-w-md w-full">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <input
             type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
             placeholder="Search documents..."
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
-        </div>
+        </form>
       </div>
 
       <div className="flex items-center space-x-4">
         <Button variant="ghost" size="icon">
           <Bell className="h-5 w-5" />
         </Button>
-        
+
         <div className="flex items-center space-x-2">
           <div className="h-8 w-8 bg-gray-300 rounded-full flex items-center justify-center">
             <User className="h-4 w-4 text-gray-600" />
