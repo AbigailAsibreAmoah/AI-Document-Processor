@@ -66,17 +66,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get last user message
     const lastUserMessage = [...messages].reverse().find((m: { role: string }) => m.role === 'user');
     const lastText = lastUserMessage?.parts
       ?.filter((p: { type: string }) => p.type === 'text')
       ?.map((p: { type: string; text?: string }) => p.text ?? '')
       ?.join('') ?? lastUserMessage?.content ?? '';
 
-    // Build system prompt
     let systemPrompt = aiService.getSystemPrompt();
 
-    // Auto web search if needed
     if (lastText && needsWebSearch(lastText)) {
       const webResults = await tavilySearch(lastText);
       if (webResults) {
@@ -84,7 +81,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Inject document context (capped at 3000 chars per doc to save tokens)
     if (documentContext && documentContext.length > 0) {
       const docText = documentContext
         .map((d: { name: string; text: string }) =>
@@ -97,7 +93,7 @@ export async function POST(request: NextRequest) {
       model: groq('llama-3.3-70b-versatile'),
       system: systemPrompt,
       messages: await convertToModelMessages(messages),
-      maxOutputTokens: 500,
+      maxOutputTokens: 800,
     });
 
     return result.toUIMessageStreamResponse();

@@ -1,3 +1,4 @@
+// services/auth.ts
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../database';
@@ -5,6 +6,7 @@ import { config } from '../lib/config';
 import { User } from '../types';
 
 export class AuthService {
+  // Register a new user
   async register(email: string, password: string, name?: string): Promise<User> {
     const existingUser = await prisma.user.findUnique({
       where: { email },
@@ -33,12 +35,14 @@ export class AuthService {
     };
   }
 
+  // Login an existing user
   async login(email: string, password: string): Promise<{ user: User; token: string }> {
     const user = await prisma.user.findUnique({
       where: { email },
     });
 
-    if (!user) {
+    // ✅ Null-safe check before bcrypt
+    if (!user || !user.password) {
       throw new Error('Invalid credentials');
     }
 
@@ -65,6 +69,7 @@ export class AuthService {
     };
   }
 
+  // Verify JWT token
   async verifyToken(token: string): Promise<{ userId: string; email: string }> {
     try {
       const decoded = jwt.verify(token, config.jwt.secret) as any;
@@ -74,6 +79,7 @@ export class AuthService {
     }
   }
 
+  // Get user by ID
   async getUserById(id: string): Promise<User | null> {
     const user = await prisma.user.findUnique({
       where: { id },

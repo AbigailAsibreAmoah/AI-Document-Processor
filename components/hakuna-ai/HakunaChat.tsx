@@ -9,6 +9,7 @@ import { useAuth } from '@/lib/auth-context';
 
 interface HakunaChatProps {
   onStartTour: () => void;
+  preselectDoc?: string | null;
 }
 
 interface DocumentContext {
@@ -16,7 +17,15 @@ interface DocumentContext {
   text: string;
 }
 
-export function HakunaChat({ onStartTour }: HakunaChatProps) {
+// Module-level — prevents infinite re-render loop
+const extractText = (msg: { parts: { type: string; text?: unknown }[] }) =>
+  msg.parts
+    .filter(p => p.type === 'text' && typeof p.text === 'string')
+    .map(p => p.text as string)
+    .filter(Boolean)
+    .join('');
+
+export function HakunaChat({ onStartTour, preselectDoc }: HakunaChatProps) {
   const [input, setInput] = useState('');
   const [tokenLoaded, setTokenLoaded] = useState(false);
   const [documents, setDocuments] = useState<DocumentContext[]>([]);
@@ -36,7 +45,6 @@ export function HakunaChat({ onStartTour }: HakunaChatProps) {
     : `Hi, I'm Hakuna AI 🦁. I can help you understand documents and navigate the platform.`;
 
   const getToken = () => localStorage.getItem('token') ?? '';
-
   const documentContextRef = useRef<DocumentContext[]>([]);
 
   const documentContext = useMemo(
@@ -73,14 +81,12 @@ export function HakunaChat({ onStartTour }: HakunaChatProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Save messages to DB
   useEffect(() => {
     if (!historyLoaded || status !== 'ready') return;
     const last = messages[messages.length - 1];
     if (!last || last.id === 'welcome') return;
-    const text = last.parts
-      .filter(p => p.type === 'text')
-      .map(p => (p as { type: 'text'; text: string }).text)
-      .join('');
+    const text = extractText(last);
     if (!text) return;
     fetch('/api/hakuna/messages', {
       method: 'POST',
@@ -88,6 +94,20 @@ export function HakunaChat({ onStartTour }: HakunaChatProps) {
       body: JSON.stringify({ role: last.role, content: text }),
     });
   }, [status]);
+
+  // Auto-select document when preselectDoc changes
+  useEffect(() => {
+    if (!preselectDoc) return;
+    if (documents.length > 0) {
+      const match = documents.find(d => d.name === preselectDoc);
+      if (match) {
+        setSelectedDoc(preselectDoc);
+        setTimeout(() => {
+          sendMessage({ text: `I just opened "${preselectDoc}" — give me a quick summary of what I should know about it.` });
+        }, 400);
+      }
+    }
+  }, [preselectDoc, documents]);
 
   const fetchDocuments = async () => {
     try {
@@ -110,7 +130,7 @@ export function HakunaChat({ onStartTour }: HakunaChatProps) {
       if (data.success && data.data.length > 0) {
         const historyMessages = data.data.map((m: { id: string; role: string; content: string }) => ({
           id: m.id, role: m.role,
-          parts: [{ type: 'text', text: m.content }],
+          parts: [{ type: 'text', text: m.content ?? '' }],
         }));
         setMessages([{
           id: 'welcome', role: 'assistant',
@@ -187,7 +207,6 @@ export function HakunaChat({ onStartTour }: HakunaChatProps) {
     <div className="flex flex-col h-full" style={{
       background: 'linear-gradient(160deg, #0d1117 0%, #111827 40%, #1a1f2e 100%)',
     }}>
-
       <style>{`
         .hk-scrollbar::-webkit-scrollbar { width: 4px; }
         .hk-scrollbar::-webkit-scrollbar-track { background: transparent; }
@@ -198,31 +217,25 @@ export function HakunaChat({ onStartTour }: HakunaChatProps) {
           0%, 80%, 100% { transform: scale(0.55); opacity: 0.35; }
           40% { transform: scale(1); opacity: 1; }
         }
+        @keyframes hk-cursor-blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0; }
+        }
 
         .hk-input:focus {
           border-color: rgba(139,92,246,0.6) !important;
           box-shadow: 0 0 0 3px rgba(99,102,241,0.1) !important;
         }
-
         .hk-send:hover:not(:disabled) {
           box-shadow: 0 4px 20px rgba(99,102,241,0.5) !important;
           transform: translateY(-1px);
         }
-
         .hk-attach:hover:not(:disabled) {
           background: rgba(212,168,67,0.18) !important;
           border-color: rgba(212,168,67,0.45) !important;
         }
-
-        .hk-select option {
-          background: #1e2433;
-          color: #c8d1e8;
-        }
-
-        .hk-font-select option {
-          background: #1e2433;
-          color: #c8d1e8;
-        }
+        .hk-select option { background: #1e2433; color: #c8d1e8; }
+        .hk-font-select option { background: #1e2433; color: #c8d1e8; }
       `}</style>
 
       {/* Document selector */}
@@ -254,7 +267,7 @@ export function HakunaChat({ onStartTour }: HakunaChatProps) {
         </div>
       )}
 
-      {/* Font controls panel */}
+      {/* Font controls */}
       {showFontControls && (
         <div style={{
           padding: '8px 12px',
@@ -298,18 +311,22 @@ export function HakunaChat({ onStartTour }: HakunaChatProps) {
         className="hk-scrollbar flex-1 overflow-y-auto p-4"
         style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(99,102,241,0.3) transparent' }}
       >
-        {messages.map((msg) => (
-          <HakunaMessage
-            key={msg.id}
-            message={msg.parts.filter(p => p.type === 'text').map(p => (p as { type: 'text'; text: string }).text).join('')}
-            isUser={msg.role !== 'assistant'}
-            timestamp={new Date()}
-            fontSize={fontSize}
-            fontFamily={fontFamily}
-          />
-        ))}
+        {messages.map((msg, index) => {
+          const text = extractText(msg);
+          if (!text) return null;
+          return (
+            <HakunaMessage
+              key={msg.id}
+              message={text}
+              isUser={msg.role !== 'assistant'}
+              timestamp={new Date()}
+              fontSize={fontSize}
+              fontFamily={fontFamily}
+              isStreaming={isLoading && index === messages.length - 1}
+            />
+          );
+        })}
 
-        {/* Typing indicator */}
         {(isLoading || uploading) && (
           <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '12px' }}>
             <div style={{
@@ -344,7 +361,7 @@ export function HakunaChat({ onStartTour }: HakunaChatProps) {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Footer actions */}
+      {/* Footer */}
       <div style={{
         padding: '6px 14px',
         borderTop: '1px solid rgba(99,102,241,0.1)',
@@ -394,7 +411,7 @@ export function HakunaChat({ onStartTour }: HakunaChatProps) {
         </button>
       </div>
 
-      {/* Input area */}
+      {/* Input */}
       <form
         onSubmit={handleSubmit}
         style={{
@@ -406,7 +423,6 @@ export function HakunaChat({ onStartTour }: HakunaChatProps) {
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".pdf,.docx,.txt" className="hidden" />
 
-          {/* Attach button */}
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
@@ -426,7 +442,6 @@ export function HakunaChat({ onStartTour }: HakunaChatProps) {
             <Paperclip size={15} />
           </button>
 
-          {/* Text input */}
           <input
             type="text"
             value={input}
@@ -444,7 +459,6 @@ export function HakunaChat({ onStartTour }: HakunaChatProps) {
             }}
           />
 
-          {/* Send button */}
           <button
             type="submit"
             disabled={isLoading || !input.trim()}
@@ -467,7 +481,6 @@ export function HakunaChat({ onStartTour }: HakunaChatProps) {
           </button>
         </div>
 
-        {/* Character hint */}
         {input.length > 0 && (
           <div style={{
             marginTop: '5px', paddingLeft: '52px',

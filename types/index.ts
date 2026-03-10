@@ -28,6 +28,10 @@ export interface ProcessingResult {
   confidence?: number;
   processedAt: Date;
   documentId: string;
+  documentType?: string;
+  category?: string;
+  tags?: string[];
+  recommendation?: string;
 }
 
 export interface KeyData {
@@ -38,6 +42,9 @@ export interface KeyData {
 }
 
 export interface Clauses {
+  risks?: string[];
+  protections?: string[];
+  ambiguities?: string[];
   paymentTerms?: string[];
   obligations?: string[];
   deadlines?: string[];

@@ -20,8 +20,9 @@ export function HakunaMessage({
   fontFamily = "'Crimson Pro', Georgia, serif",
   isStreaming = false,
 }: HakunaMessageProps) {
-  const [displayed, setDisplayed] = useState(isUser ? message : '');
+  const [displayed, setDisplayed] = useState(message);
   const prevMessage = useRef(message);
+  const isFirstRender = useRef(true);
 
   useEffect(() => {
     if (isUser) {
@@ -29,22 +30,23 @@ export function HakunaMessage({
       return;
     }
 
-    // If message grew (streaming in), animate the new characters
-    if (message.startsWith(prevMessage.current)) {
-      const newChars = message.slice(prevMessage.current.length);
-      let i = 0;
-      const interval = setInterval(() => {
-        if (i >= newChars.length) {
-          clearInterval(interval);
-          prevMessage.current = message;
-          return;
-        }
-        setDisplayed(prev => prev + newChars[i]);
-        i++;
-      }, 8); // ← adjust speed here: lower = faster, higher = slower
-      return () => clearInterval(interval);
-    } else {
-      // Message changed entirely (new message)
+    // While streaming, show message directly — no typewriter fighting the stream
+    if (isStreaming) {
+      setDisplayed(message);
+      prevMessage.current = message;
+      return;
+    }
+
+    // First render or static message — show immediately
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      setDisplayed(message);
+      prevMessage.current = message;
+      return;
+    }
+
+    // Animate only when a complete new message arrives after streaming ends
+    if (message !== prevMessage.current) {
       setDisplayed('');
       prevMessage.current = '';
       let i = 0;
@@ -56,16 +58,15 @@ export function HakunaMessage({
         }
         setDisplayed(prev => prev + message[i]);
         i++;
-      }, 8);
+      }, 6);
       return () => clearInterval(interval);
     }
-  }, [message, isUser]);
+  }, [message, isUser, isStreaming]);
 
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4`}>
       <div style={{ maxWidth: '84%' }}>
 
-        {/* Hakuna label */}
         {!isUser && (
           <div style={{
             display: 'flex', alignItems: 'center', gap: '6px',
@@ -86,7 +87,6 @@ export function HakunaMessage({
           </div>
         )}
 
-        {/* Bubble */}
         <div style={{
           borderRadius: isUser ? '18px 18px 4px 18px' : '4px 18px 18px 18px',
           padding: '11px 15px',
@@ -188,7 +188,6 @@ export function HakunaMessage({
           )}
         </div>
 
-        {/* Timestamp */}
         <p style={{
           fontSize: '10px', color: '#374151', marginTop: '4px',
           paddingLeft: isUser ? '0' : '6px',

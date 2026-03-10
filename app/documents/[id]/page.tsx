@@ -95,18 +95,26 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
   }
 
   const tags: string[] = Array.isArray(result?.tags)
-    ? result.tags
+    ? result!.tags!
     : result?.tags
     ? JSON.parse(result.tags as unknown as string)
     : [];
 
-  const hasParties = (result?.keyData?.parties?.length ?? 0) > 0;
-  const hasDates = (result?.keyData?.dates?.length ?? 0) > 0;
-  const hasAmounts = (result?.keyData?.amounts?.length ?? 0) > 0;
-  const hasObligations = (result?.keyData?.obligations?.length ?? 0) > 0;
-  const hasRisks = (result?.clauses?.risks?.length ?? 0) > 0;
-  const hasProtections = (result?.clauses?.protections?.length ?? 0) > 0;
-  const hasAmbiguities = (result?.clauses?.ambiguities?.length ?? 0) > 0;
+  const risks: string[] = Array.isArray(result?.clauses?.risks) ? result!.clauses!.risks! : [];
+  const protections: string[] = Array.isArray(result?.clauses?.protections) ? result!.clauses!.protections! : [];
+  const ambiguities: string[] = Array.isArray(result?.clauses?.ambiguities) ? result!.clauses!.ambiguities! : [];
+  const parties: string[] = Array.isArray(result?.keyData?.parties) ? result!.keyData!.parties! : [];
+  const dates: string[] = Array.isArray(result?.keyData?.dates) ? result!.keyData!.dates! : [];
+  const amounts: string[] = Array.isArray(result?.keyData?.amounts) ? result!.keyData!.amounts! : [];
+  const obligations: string[] = Array.isArray(result?.keyData?.obligations) ? result!.keyData!.obligations! : [];
+
+  const hasRisks = risks.length > 0;
+  const hasProtections = protections.length > 0;
+  const hasAmbiguities = ambiguities.length > 0;
+  const hasParties = parties.length > 0;
+  const hasDates = dates.length > 0;
+  const hasAmounts = amounts.length > 0;
+  const hasObligations = obligations.length > 0;
 
   return (
     <Layout>
@@ -198,6 +206,18 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
                 )}
               </div>
 
+              {/* Summary */}
+              <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+                <h3 className="text-base font-semibold text-gray-900 mb-3">Summary</h3>
+                <p className="text-gray-700 leading-relaxed">{result.summary}</p>
+                <div className="mt-4 flex items-center text-xs text-gray-400 gap-1">
+                  <Clock className="h-3.5 w-3.5" />
+                  Processed {new Date(result.processedAt).toLocaleDateString('en-GB', {
+                    day: 'numeric', month: 'long', year: 'numeric'
+                  })}
+                </div>
+              </div>
+
               {/* Recommendation */}
               {result.recommendation && (
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-5">
@@ -211,18 +231,6 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
                 </div>
               )}
 
-              {/* Summary */}
-              <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-                <h3 className="text-base font-semibold text-gray-900 mb-3">Summary</h3>
-                <p className="text-gray-700 leading-relaxed">{result.summary}</p>
-                <div className="mt-4 flex items-center text-xs text-gray-400 gap-1">
-                  <Clock className="h-3.5 w-3.5" />
-                  Processed {new Date(result.processedAt).toLocaleDateString('en-GB', {
-                    day: 'numeric', month: 'long', year: 'numeric'
-                  })}
-                </div>
-              </div>
-
               {/* Risks */}
               {hasRisks && (
                 <div className="bg-red-50 border border-red-100 rounded-xl p-5">
@@ -231,7 +239,7 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
                     <h3 className="text-base font-semibold text-red-700">Risks & Watch Out For</h3>
                   </div>
                   <ul className="space-y-2">
-                    {result.clauses.risks.map((risk, i) => (
+                    {risks.map((risk, i) => (
                       <li key={i} className="flex items-start gap-2 text-sm text-red-800">
                         <span className="w-1.5 h-1.5 bg-red-400 rounded-full mt-2 flex-shrink-0" />
                         {risk}
@@ -249,7 +257,7 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
                     <h3 className="text-base font-semibold text-green-700">Protections</h3>
                   </div>
                   <ul className="space-y-2">
-                    {result.clauses.protections.map((p, i) => (
+                    {protections.map((p, i) => (
                       <li key={i} className="flex items-start gap-2 text-sm text-green-800">
                         <span className="w-1.5 h-1.5 bg-green-400 rounded-full mt-2 flex-shrink-0" />
                         {p}
@@ -267,7 +275,7 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
                     <h3 className="text-base font-semibold text-yellow-700">Ambiguities & Unclear Terms</h3>
                   </div>
                   <ul className="space-y-2">
-                    {result.clauses.ambiguities.map((a, i) => (
+                    {ambiguities.map((a, i) => (
                       <li key={i} className="flex items-start gap-2 text-sm text-yellow-800">
                         <span className="w-1.5 h-1.5 bg-yellow-400 rounded-full mt-2 flex-shrink-0" />
                         {a}
@@ -280,7 +288,6 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
 
             {/* Sidebar */}
             <div className="space-y-5">
-
               <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm space-y-3">
                 <h3 className="text-sm font-semibold text-gray-900">Document Info</h3>
                 <div>
@@ -300,7 +307,7 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
                     <h3 className="text-sm font-semibold text-gray-900">Parties Involved</h3>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
-                    {result.keyData.parties.map((party, i) => (
+                    {parties.map((party, i) => (
                       <span key={i} className="text-xs bg-indigo-50 text-indigo-700 border border-indigo-100 px-2 py-1 rounded-lg">
                         {party}
                       </span>
@@ -316,7 +323,7 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
                     <h3 className="text-sm font-semibold text-gray-900">Key Dates</h3>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
-                    {result.keyData.dates.map((date, i) => (
+                    {dates.map((date, i) => (
                       <span key={i} className="text-xs bg-green-50 text-green-700 border border-green-100 px-2 py-1 rounded-lg">
                         {date}
                       </span>
@@ -332,7 +339,7 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
                     <h3 className="text-sm font-semibold text-gray-900">Amounts</h3>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
-                    {result.keyData.amounts.map((amount, i) => (
+                    {amounts.map((amount, i) => (
                       <span key={i} className="text-xs bg-amber-50 text-amber-700 border border-amber-100 px-2 py-1 rounded-lg">
                         {amount}
                       </span>
@@ -348,7 +355,7 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
                     <h3 className="text-sm font-semibold text-gray-900">Obligations</h3>
                   </div>
                   <ul className="space-y-2">
-                    {result.keyData.obligations.map((ob, i) => (
+                    {obligations.map((ob, i) => (
                       <li key={i} className="flex items-start gap-2 text-xs text-gray-700">
                         <span className="w-1.5 h-1.5 bg-purple-400 rounded-full mt-1.5 flex-shrink-0" />
                         {ob}
