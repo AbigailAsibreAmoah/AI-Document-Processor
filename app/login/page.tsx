@@ -19,15 +19,12 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError('');
-
     const success = await login(email, password);
-
     if (success) {
       router.push('/dashboard');
     } else {
       setError('Invalid email or password');
     }
-
     setLoading(false);
   };
 
@@ -39,10 +36,7 @@ export default function LoginPage() {
   return (
     <div
       className="min-h-screen flex items-center justify-center p-4"
-      style={{
-        background:
-          'radial-gradient(ellipse at top, #1a1a2e 0%, #0f0f0f 50%, #000000 100%)',
-      }}
+      style={{ background: 'radial-gradient(ellipse at top, #1a1a2e 0%, #0f0f0f 50%, #000000 100%)' }}
     >
       <div className="w-full max-w-sm space-y-6">
 
@@ -62,13 +56,13 @@ export default function LoginPage() {
 
         {/* Social Buttons */}
         <div className="space-y-3">
-
-          {/* GOOGLE */}
           <button
             type="button"
-            onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
+            onClick={() => signIn('google', { callbackUrl: '/oauth-callback' })}
             className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl text-white font-medium transition-all"
             style={inputStyle}
+            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.12)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
           >
             <svg width="18" height="18" viewBox="0 0 18 18">
               <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/>
@@ -79,19 +73,19 @@ export default function LoginPage() {
             Log in with Google
           </button>
 
-          {/* GITHUB */}
           <button
             type="button"
-            onClick={() => signIn('github', { callbackUrl: '/dashboard' })}
+            onClick={() => signIn('github', { callbackUrl: '/oauth-callback' })}
             className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl text-white font-medium transition-all"
             style={inputStyle}
+            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.12)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
               <path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0112 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/>
             </svg>
             Log in with GitHub
           </button>
-
         </div>
 
         {/* Divider */}
@@ -103,8 +97,88 @@ export default function LoginPage() {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* email + password fields unchanged */}
+          <div>
+            <label className="text-gray-300 text-sm mb-1.5 block">Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              required
+              className="w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 outline-none transition-all"
+              style={inputStyle}
+              onFocus={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.35)')}
+              onBlur={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)')}
+            />
+          </div>
+
+          <div>
+            <div className="flex justify-between mb-1.5">
+              <label className="text-gray-300 text-sm">Password</label>
+              <button type="button" className="text-gray-400 text-sm hover:text-white transition-colors">
+                Forgot your password?
+              </button>
+            </div>
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="••••••••••••"
+                required
+                className="w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 outline-none transition-all pr-12"
+                style={inputStyle}
+                onFocus={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.35)')}
+                onBlur={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)')}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(v => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+              >
+                {showPassword ? (
+                  <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/>
+                    <path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/>
+                    <line x1="1" y1="1" x2="23" y2="23"/>
+                  </svg>
+                ) : (
+                  <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {error && (
+            <div
+              className="px-4 py-3 rounded-xl text-red-400 text-sm"
+              style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)' }}
+            >
+              {error}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3 rounded-xl font-medium transition-opacity disabled:opacity-60"
+            style={{ background: 'rgba(255,255,255,0.9)', color: '#000' }}
+            onMouseEnter={e => !loading && (e.currentTarget.style.background = '#ffffff')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.9)')}
+          >
+            {loading ? 'Signing in...' : 'Log In'}
+          </button>
         </form>
+
+        <p className="text-center text-gray-500 text-xs">
+          By signing in, you agree to our{' '}
+          <span className="text-gray-400 hover:text-white cursor-pointer transition-colors">Terms</span>
+          {' '}and{' '}
+          <span className="text-gray-400 hover:text-white cursor-pointer transition-colors">Privacy Policy</span>.
+        </p>
 
       </div>
     </div>
