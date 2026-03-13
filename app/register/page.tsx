@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { signIn } from 'next-auth/react';
 import { useAuth } from '../../lib/auth-context';
-import { Mail } from 'lucide-react';
+import { Mail, CheckCircle, XCircle } from 'lucide-react';
 
 export default function RegisterPage() {
   const [name, setName] = useState('');
@@ -25,10 +25,22 @@ export default function RegisterPage() {
     border: '1px solid rgba(255,255,255,0.12)',
   };
 
+  const passwordRules = [
+    { label: 'At least 8 characters', test: (p: string) => p.length >= 8 },
+    { label: 'At least 1 uppercase letter', test: (p: string) => /[A-Z]/.test(p) },
+    { label: 'At least 1 number', test: (p: string) => /[0-9]/.test(p) },
+    { label: 'At least 1 special character', test: (p: string) => /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(p) },
+  ];
+
+  const passwordValid = passwordRules.every(r => r.test(password));
+
   const sendOtp = async () => {
     if (!name) { setError('Please enter your name'); return; }
     if (!email) { setError('Please enter your email'); return; }
-    if (!password || password.length < 6) { setError('Password must be at least 6 characters'); return; }
+    if (!passwordValid) {
+      setError('Please meet all password requirements');
+      return;
+    }
 
     setLoading(true);
     setError('');
@@ -194,7 +206,7 @@ export default function RegisterPage() {
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={e => setPassword(e.target.value)}
-                    placeholder="•••••••••••• (min 6 chars)"
+                    placeholder="••••••••••••"
                     required
                     className="w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 outline-none transition-all pr-12"
                     style={inputStyle}
@@ -220,6 +232,24 @@ export default function RegisterPage() {
                     )}
                   </button>
                 </div>
+
+                {/* Password rules */}
+                {password.length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    {passwordRules.map(rule => (
+                      <div key={rule.label} className="flex items-center gap-2">
+                        {rule.test(password) ? (
+                          <CheckCircle className="h-3.5 w-3.5 text-emerald-400 flex-shrink-0" />
+                        ) : (
+                          <XCircle className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                        )}
+                        <span className={`text-xs ${rule.test(password) ? 'text-emerald-400' : 'text-gray-500'}`}>
+                          {rule.label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {error && (
