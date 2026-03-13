@@ -1,4 +1,4 @@
-import fs from 'fs/promises';
+import { put, del } from '@vercel/blob';
 import path from 'path';
 import { config } from '../lib/config';
 
@@ -8,30 +8,36 @@ export interface StorageProvider {
   getUrl(filePath: string): string;
 }
 
+class VercelBlobProvider implements StorageProvider {
+  async upload(file: Buffer, filename: string): Promise<string> {
+    const blob = await put(filename, file, { access: 'public' });
+    return blob.url;
+  }
+
+  async delete(filePath: string): Promise<void> {
+    await del(filePath);
+  }
+
+  getUrl(filePath: string): string {
+    return filePath; // already a full URL
+  }
+}
+
 class LocalStorageProvider implements StorageProvider {
   private uploadDir = path.join(process.cwd(), 'uploads');
 
-  constructor() {
-    this.ensureUploadDir();
-  }
-
-  private async ensureUploadDir() {
-    try {
-      await fs.access(this.uploadDir);
-    } catch {
-      await fs.mkdir(this.uploadDir, { recursive: true });
-    }
-  }
-
   async upload(file: Buffer, filename: string): Promise<string> {
+    const fs = await import('fs/promises');
+    try { await fs.access(this.uploadDir); } 
+    catch { await fs.mkdir(this.uploadDir, { recursive: true }); }
     const filePath = path.join(this.uploadDir, filename);
     await fs.writeFile(filePath, file);
     return filename;
   }
 
   async delete(filePath: string): Promise<void> {
-    const fullPath = path.join(this.uploadDir, filePath);
-    await fs.unlink(fullPath);
+    const fs = await import('fs/promises');
+    await fs.unlink(path.join(this.uploadDir, filePath));
   }
 
   getUrl(filePath: string): string {
@@ -39,31 +45,15 @@ class LocalStorageProvider implements StorageProvider {
   }
 }
 
-class S3StorageProvider implements StorageProvider {
-  // Placeholder for S3 implementation
-  async upload(file: Buffer, filename: string): Promise<string> {
-    // TODO: Implement S3 upload using AWS SDK
-    throw new Error('S3 storage not implemented');
-  }
-
-  async delete(filePath: string): Promise<void> {
-    // TODO: Implement S3 delete
-    throw new Error('S3 storage not implemented');
-  }
-
-  getUrl(filePath: string): string {
-    // TODO: Return S3 URL
-    return `https://${config.storage.aws.bucket}.s3.${config.storage.aws.region}.amazonaws.com/${filePath}`;
-  }
-}
-
 export class StorageService {
   private provider: StorageProvider;
 
   constructor() {
-    this.provider = config.storage.type === 's3' 
-      ? new S3StorageProvider() 
-      : new LocalStorageProvider();
+    if (process.env.NODE_ENV === 'production' || config.storage.type === 'blob') {
+      this.provider = new VercelBlobProvider();
+    } else {
+      this.provider = new LocalStorageProvider();
+    }
   }
 
   async uploadFile(file: Buffer, filename: string): Promise<string> {
