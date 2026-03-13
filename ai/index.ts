@@ -54,6 +54,27 @@ You exist to save time and tell the truth. Sound like it.
     `;
   }
 
+  async generateCompletion(prompt: string): Promise<string> {
+    const response = await this.groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are an expert document analyst. Return only valid JSON with no extra text or markdown.',
+        },
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+      temperature: 0.2,
+      max_tokens: 2000,
+    });
+
+    const content = response.choices[0]?.message?.content ?? '{}';
+    return content.replace(/```json|```/g, '').trim();
+  }
+
   async processDocument(text: string): Promise<{
     summary: string;
     keyData: KeyData;

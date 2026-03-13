@@ -8,9 +8,9 @@ import { Button } from '../../../components/ui/button';
 import {
   ArrowLeft, Download, Clock, CheckCircle, AlertTriangle,
   Shield, HelpCircle, Lightbulb, Tag, Users, Calendar,
-  DollarSign, MessageSquare
+  DollarSign, MessageSquare, Table2, Image
 } from 'lucide-react';
-import { Document, ProcessingResult } from '../../../types';
+import { Document, ProcessingResult, TableData, FigureData } from '../../../types';
 
 function friendlyMimeType(mime: string): string {
   const map: Record<string, string> = {
@@ -63,9 +63,7 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
   };
 
   const openHakunaWithDoc = () => {
-    if (document) {
-      localStorage.setItem('hakuna_preselect_doc', document.originalName);
-    }
+    if (document) localStorage.setItem('hakuna_preselect_doc', document.originalName);
     window.dispatchEvent(new CustomEvent('hakuna:open', {
       detail: { documentName: document?.originalName }
     }));
@@ -94,12 +92,7 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
     );
   }
 
-  const tags: string[] = Array.isArray(result?.tags)
-    ? result!.tags!
-    : result?.tags
-    ? JSON.parse(result.tags as unknown as string)
-    : [];
-
+  const tags: string[] = Array.isArray(result?.tags) ? result!.tags! : result?.tags ? JSON.parse(result.tags as unknown as string) : [];
   const risks: string[] = Array.isArray(result?.clauses?.risks) ? result!.clauses!.risks! : [];
   const protections: string[] = Array.isArray(result?.clauses?.protections) ? result!.clauses!.protections! : [];
   const ambiguities: string[] = Array.isArray(result?.clauses?.ambiguities) ? result!.clauses!.ambiguities! : [];
@@ -107,14 +100,8 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
   const dates: string[] = Array.isArray(result?.keyData?.dates) ? result!.keyData!.dates! : [];
   const amounts: string[] = Array.isArray(result?.keyData?.amounts) ? result!.keyData!.amounts! : [];
   const obligations: string[] = Array.isArray(result?.keyData?.obligations) ? result!.keyData!.obligations! : [];
-
-  const hasRisks = risks.length > 0;
-  const hasProtections = protections.length > 0;
-  const hasAmbiguities = ambiguities.length > 0;
-  const hasParties = parties.length > 0;
-  const hasDates = dates.length > 0;
-  const hasAmounts = amounts.length > 0;
-  const hasObligations = obligations.length > 0;
+  const tables: TableData[] = Array.isArray(result?.tables) ? result!.tables! : [];
+  const figures: FigureData[] = Array.isArray(result?.figures) ? result!.figures! : [];
 
   return (
     <Layout>
@@ -129,43 +116,26 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
             <div>
               <div className="flex items-center gap-3 flex-wrap">
                 <h1 className="text-2xl font-bold text-gray-900">{document.originalName}</h1>
-                <Badge className={
-                  document.status === 'COMPLETED'
-                    ? 'bg-green-100 text-green-700 border-green-200'
-                    : 'bg-yellow-100 text-yellow-700'
-                }>
+                <Badge className={document.status === 'COMPLETED' ? 'bg-green-100 text-green-700 border-green-200' : 'bg-yellow-100 text-yellow-700'}>
                   {document.status === 'COMPLETED' && <CheckCircle className="h-3 w-3 mr-1" />}
                   {document.status}
                 </Badge>
               </div>
               <p className="text-sm text-gray-500 mt-1">
-                Uploaded {new Date(document.uploadedAt).toLocaleDateString('en-GB', {
-                  day: 'numeric', month: 'long', year: 'numeric'
-                })}
+                Uploaded {new Date(document.uploadedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
                 {result?.confidence && (
-                  <span className="ml-3 text-indigo-600 font-medium">
-                    {(result.confidence * 100).toFixed(0)}% confidence
-                  </span>
+                  <span className="ml-3 text-indigo-600 font-medium">{(result.confidence * 100).toFixed(0)}% confidence</span>
                 )}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             {document.status === 'COMPLETED' && (
-              <Button
-                size="sm"
-                onClick={openHakunaWithDoc}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white"
-              >
-                <MessageSquare className="h-4 w-4 mr-2" />
-                Ask Hakuna
+              <Button size="sm" onClick={openHakunaWithDoc} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+                <MessageSquare className="h-4 w-4 mr-2" />Ask Hakuna
               </Button>
             )}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => window.open(`/api/files/${document.filePath}`, '_blank')}
-            >
+            <Button variant="outline" size="sm" onClick={() => window.open(`/api/files/${document.filePath}`, '_blank')}>
               <Download className="h-4 w-4 mr-2" /> Download
             </Button>
           </div>
@@ -175,22 +145,14 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-5">
 
-              {/* Document Type + Category + Tags */}
+              {/* Document Type + Tags */}
               <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100 rounded-xl p-5">
                 <div className="flex items-start justify-between flex-wrap gap-3">
                   <div>
-                    {result.documentType && (
-                      <span className="text-xs font-semibold text-indigo-400 uppercase tracking-widest">
-                        Document Type
-                      </span>
-                    )}
-                    <h2 className="text-xl font-bold text-gray-900 mt-1">
-                      {result.documentType ?? 'Document'}
-                    </h2>
+                    {result.documentType && <span className="text-xs font-semibold text-indigo-400 uppercase tracking-widest">Document Type</span>}
+                    <h2 className="text-xl font-bold text-gray-900 mt-1">{result.documentType ?? 'Document'}</h2>
                     {result.category && (
-                      <span className="inline-block mt-1 text-sm text-indigo-600 font-medium bg-indigo-100 px-3 py-0.5 rounded-full">
-                        {result.category}
-                      </span>
+                      <span className="inline-block mt-1 text-sm text-indigo-600 font-medium bg-indigo-100 px-3 py-0.5 rounded-full">{result.category}</span>
                     )}
                   </div>
                 </div>
@@ -198,9 +160,7 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
                   <div className="flex items-center gap-2 flex-wrap mt-3">
                     <Tag className="h-3.5 w-3.5 text-gray-400" />
                     {tags.map((tag, i) => (
-                      <span key={i} className="text-xs bg-white border border-gray-200 text-gray-600 px-2 py-0.5 rounded-full">
-                        {tag}
-                      </span>
+                      <span key={i} className="text-xs bg-white border border-gray-200 text-gray-600 px-2 py-0.5 rounded-full">{tag}</span>
                     ))}
                   </div>
                 )}
@@ -212,9 +172,7 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
                 <p className="text-gray-700 leading-relaxed">{result.summary}</p>
                 <div className="mt-4 flex items-center text-xs text-gray-400 gap-1">
                   <Clock className="h-3.5 w-3.5" />
-                  Processed {new Date(result.processedAt).toLocaleDateString('en-GB', {
-                    day: 'numeric', month: 'long', year: 'numeric'
-                  })}
+                  Processed {new Date(result.processedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
                 </div>
               </div>
 
@@ -223,16 +181,14 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-5">
                   <div className="flex items-center gap-2 mb-2">
                     <Lightbulb className="h-4 w-4 text-amber-500" />
-                    <span className="text-sm font-semibold text-amber-700 uppercase tracking-wide">
-                      Recommendation
-                    </span>
+                    <span className="text-sm font-semibold text-amber-700 uppercase tracking-wide">Recommendation</span>
                   </div>
                   <p className="text-gray-800 leading-relaxed">{result.recommendation}</p>
                 </div>
               )}
 
               {/* Risks */}
-              {hasRisks && (
+              {risks.length > 0 && (
                 <div className="bg-red-50 border border-red-100 rounded-xl p-5">
                   <div className="flex items-center gap-2 mb-3">
                     <AlertTriangle className="h-4 w-4 text-red-500" />
@@ -241,8 +197,7 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
                   <ul className="space-y-2">
                     {risks.map((risk, i) => (
                       <li key={i} className="flex items-start gap-2 text-sm text-red-800">
-                        <span className="w-1.5 h-1.5 bg-red-400 rounded-full mt-2 flex-shrink-0" />
-                        {risk}
+                        <span className="w-1.5 h-1.5 bg-red-400 rounded-full mt-2 flex-shrink-0" />{risk}
                       </li>
                     ))}
                   </ul>
@@ -250,7 +205,7 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
               )}
 
               {/* Protections */}
-              {hasProtections && (
+              {protections.length > 0 && (
                 <div className="bg-green-50 border border-green-100 rounded-xl p-5">
                   <div className="flex items-center gap-2 mb-3">
                     <Shield className="h-4 w-4 text-green-600" />
@@ -259,8 +214,7 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
                   <ul className="space-y-2">
                     {protections.map((p, i) => (
                       <li key={i} className="flex items-start gap-2 text-sm text-green-800">
-                        <span className="w-1.5 h-1.5 bg-green-400 rounded-full mt-2 flex-shrink-0" />
-                        {p}
+                        <span className="w-1.5 h-1.5 bg-green-400 rounded-full mt-2 flex-shrink-0" />{p}
                       </li>
                     ))}
                   </ul>
@@ -268,7 +222,7 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
               )}
 
               {/* Ambiguities */}
-              {hasAmbiguities && (
+              {ambiguities.length > 0 && (
                 <div className="bg-yellow-50 border border-yellow-100 rounded-xl p-5">
                   <div className="flex items-center gap-2 mb-3">
                     <HelpCircle className="h-4 w-4 text-yellow-600" />
@@ -277,16 +231,78 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
                   <ul className="space-y-2">
                     {ambiguities.map((a, i) => (
                       <li key={i} className="flex items-start gap-2 text-sm text-yellow-800">
-                        <span className="w-1.5 h-1.5 bg-yellow-400 rounded-full mt-2 flex-shrink-0" />
-                        {a}
+                        <span className="w-1.5 h-1.5 bg-yellow-400 rounded-full mt-2 flex-shrink-0" />{a}
                       </li>
                     ))}
                   </ul>
                 </div>
               )}
+
+              {/* Extracted Tables */}
+              {tables.length > 0 && (
+                <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Table2 className="h-4 w-4 text-indigo-500" />
+                    <h3 className="text-base font-semibold text-gray-900">
+                      Extracted Tables
+                      <span className="ml-2 text-sm font-normal text-gray-400">({tables.length})</span>
+                    </h3>
+                  </div>
+                  <div className="space-y-6">
+                    {tables.map((table, i) => (
+                      <div key={i}>
+                        <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Table {i + 1} — {table.rowCount} rows × {table.colCount} columns</p>
+                        <div className="overflow-x-auto rounded-lg border border-gray-200">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="bg-indigo-50">
+                                {table.headers.map((h, j) => (
+                                  <th key={j} className="px-3 py-2 text-left text-xs font-semibold text-indigo-700 border-b border-indigo-100">
+                                    {h}
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {table.rows.map((row, j) => (
+                                <tr key={j} className={j % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                                  {row.map((cell, k) => (
+                                    <td key={k} className="px-3 py-2 text-gray-700 border-b border-gray-100">{cell}</td>
+                                  ))}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Detected Figures */}
+              {figures.length > 0 && (
+                <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Image className="h-4 w-4 text-purple-500" />
+                    <h3 className="text-base font-semibold text-gray-900">
+                      Detected Figures
+                      <span className="ml-2 text-sm font-normal text-gray-400">({figures.length})</span>
+                    </h3>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {figures.map((fig, i) => (
+                      <div key={i} className="bg-purple-50 border border-purple-100 rounded-lg p-3">
+                        <p className="text-xs font-semibold text-purple-600 mb-1">{fig.label}</p>
+                        <p className="text-xs text-gray-600 line-clamp-3">{fig.context}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Sidebar */}
+            {/* Sidebar — unchanged */}
             <div className="space-y-5">
               <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm space-y-3">
                 <h3 className="text-sm font-semibold text-gray-900">Document Info</h3>
@@ -300,7 +316,7 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
                 </div>
               </div>
 
-              {hasParties && (
+              {parties.length > 0 && (
                 <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
                   <div className="flex items-center gap-2 mb-3">
                     <Users className="h-4 w-4 text-indigo-400" />
@@ -308,15 +324,13 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {parties.map((party, i) => (
-                      <span key={i} className="text-xs bg-indigo-50 text-indigo-700 border border-indigo-100 px-2 py-1 rounded-lg">
-                        {party}
-                      </span>
+                      <span key={i} className="text-xs bg-indigo-50 text-indigo-700 border border-indigo-100 px-2 py-1 rounded-lg">{party}</span>
                     ))}
                   </div>
                 </div>
               )}
 
-              {hasDates && (
+              {dates.length > 0 && (
                 <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
                   <div className="flex items-center gap-2 mb-3">
                     <Calendar className="h-4 w-4 text-green-500" />
@@ -324,15 +338,13 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {dates.map((date, i) => (
-                      <span key={i} className="text-xs bg-green-50 text-green-700 border border-green-100 px-2 py-1 rounded-lg">
-                        {date}
-                      </span>
+                      <span key={i} className="text-xs bg-green-50 text-green-700 border border-green-100 px-2 py-1 rounded-lg">{date}</span>
                     ))}
                   </div>
                 </div>
               )}
 
-              {hasAmounts && (
+              {amounts.length > 0 && (
                 <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
                   <div className="flex items-center gap-2 mb-3">
                     <DollarSign className="h-4 w-4 text-amber-500" />
@@ -340,15 +352,13 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {amounts.map((amount, i) => (
-                      <span key={i} className="text-xs bg-amber-50 text-amber-700 border border-amber-100 px-2 py-1 rounded-lg">
-                        {amount}
-                      </span>
+                      <span key={i} className="text-xs bg-amber-50 text-amber-700 border border-amber-100 px-2 py-1 rounded-lg">{amount}</span>
                     ))}
                   </div>
                 </div>
               )}
 
-              {hasObligations && (
+              {obligations.length > 0 && (
                 <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
                   <div className="flex items-center gap-2 mb-3">
                     <CheckCircle className="h-4 w-4 text-purple-500" />
@@ -357,8 +367,7 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
                   <ul className="space-y-2">
                     {obligations.map((ob, i) => (
                       <li key={i} className="flex items-start gap-2 text-xs text-gray-700">
-                        <span className="w-1.5 h-1.5 bg-purple-400 rounded-full mt-1.5 flex-shrink-0" />
-                        {ob}
+                        <span className="w-1.5 h-1.5 bg-purple-400 rounded-full mt-1.5 flex-shrink-0" />{ob}
                       </li>
                     ))}
                   </ul>

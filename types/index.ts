@@ -19,12 +19,27 @@ export interface Document {
   userId: string;
 }
 
+export interface TableData {
+  headers: string[];
+  rows: string[][];
+  rowCount: number;
+  colCount: number;
+}
+
+export interface FigureData {
+  label: string;
+  number: string | null;
+  context: string;
+}
+
 export interface ProcessingResult {
   id: string;
   summary?: string;
   extractedText?: string;
   keyData?: KeyData;
   clauses?: Clauses;
+  tables?: TableData[];
+  figures?: FigureData[];
   confidence?: number;
   processedAt: Date;
   documentId: string;
@@ -74,4 +89,21 @@ export interface ApiResponse<T = any> {
   data?: T;
   error?: string;
   message?: string;
+}
+
+export interface SemanticSearchResult {
+  id: string;
+  content: string;
+  documentId: string;
+  docId: string;
+  originalName: string;
+  similarity: number;
+}
+
+export interface ComparisonResult {
+  similarities: string[];
+  differences: string[];
+  doc1Advantages: string[];
+  doc2Advantages: string[];
+  recommendation: string;
 }
